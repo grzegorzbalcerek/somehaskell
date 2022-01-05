@@ -1,0 +1,28 @@
+Content-Type: text/enriched
+Text-Width: 70
+
+<bold>niewidoczna-</bold>
+
+niewidoczny tekst
+
+<bold>sekcja1</bold>
+
+
+proba
++---
+aaaa
+cccc
+  +---
+  some lt: << <bold>somebold</bold> some normal <italic>someitalic</italic>
+  +---
+<italic>ddddd</italic>
+eeee
+fffff
++---
+po <x-color><param>red</param>ramc</x-color> <x-display><param>(disable-eval (height 0.5))</param>przygotuje</x-display> coś
+po <x-color><param>red</param>ramc</x-color> <x-display><param>(height 0.5)</param>przygotuje</x-display> coś
+
+<bold>sekcja2-</bold>
+
+
+proba2

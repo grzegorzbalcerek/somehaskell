@@ -1,0 +1,12 @@
+Content-Type: text/enriched
+Text-Width: 70
+
+<bold>sekcja1</bold>
+
+
+<x-color><param>cyan</param>Ἑτοιμάσατε τὴν ὁδὸν Κυρίου,
+
+εὐθείας ποιεῖτε τὰς τρίβους αὐτοῦ</x-color>,
+
+
+proba2

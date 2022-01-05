@@ -4,3 +4,8 @@ out/
 app.log
 res.txt
 **/*.iml
+**/*.hi
+**/*.o
+enriched/enriched2latex
+enriched/enriched2model
+enriched/enriched2svg
