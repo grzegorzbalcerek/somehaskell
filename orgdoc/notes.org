@@ -1,0 +1,520 @@
+# -*- coding: utf-8; -*-
+* cmd
+cd C:\Users\grzes\github\orgmode
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses && orgmode latexarticle ..\scalatypeclasses.org scalatypeclassesarticle.tex"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses && pdflatex scalatypeclassesarticle.tex"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses && scalatypeclassesarticle.pdf"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses2 && orgmode latexslides ..\scalatypeclasses2.org scalatypeclasses2.tex"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses2 && pdflatex scalatypeclasses2.tex"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses2 && scalatypeclasses2.pdf"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses && orgmode latexslides ..\scalatypeclasses.org scalatypeclasses.tex"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses && more scalatypeclasses.tex"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses && pdflatex scalatypeclasses.tex"
+cmd /c "cd ..\..\2015\Documents\public\scalatypeclasses && scalatypeclasses.pdf"
+cmd /c "cd ..\..\2015\Documents\jps2 && orgmode latexbook jps2.org jps2.tex"
+cmd /c "cd ..\..\2015\Documents\jps2 && more jps2.tex"
+cmd /c "cd ..\..\2015\Documents\jps2 && pdflatex jps2.tex"
+cmd /c "cd ..\..\2015\Documents\jps2 && jps2.pdf"
+cmd /c "cd ..\..\2015\Documents\jps2 && orgmode multihtml jps2.org target/webnew"
+* VerifyOutput.hs
+-- -*- coding: utf-8; -*-
+module VerifyOutput where
+
+import Model
+import Control.Monad
+import System.Directory
+import System.IO
+import GHC.IO.Encoding
+import Data.List
+import Data.Char
+
+verifySection :: [Element] -> String -> IO ()
+verifySection parts path = do
+  putStr $ "Verifying " ++ path ++ ": "
+  inputExists <- doesFileExist path
+  if inputExists
+  then do
+    hinput <- openFile path ReadMode
+    hSetEncoding hinput utf8
+    actual <- hGetContents hinput
+    let expected = getSrcFromElements parts
+    --putStrLn $ show expected
+    --putStrLn actual
+    let result = verifyExpectedAndActualOutputs (map (filter (/='\r')) expected) (filter (/='\r') actual)
+    putStrLn result
+    hClose hinput
+  else
+    putStrLn "file not found"
+  
+
+getSrcFromElements :: [Element] -> [String]
+getSrcFromElements =
+  foldr getSrc []
+  where getSrc part acc =
+          case part of
+            Text props _ src | hasProp "verify" props -> (filter (\c -> ord c < 9216) src) : acc
+            _ -> acc
+
+
+verifyExpectedAndActualOutputs :: [String] -> String -> String
+verifyExpectedAndActualOutputs _ [] = "OK"
+verifyExpectedAndActualOutputs [] actual = "OK"
+verifyExpectedAndActualOutputs (expected:rest) actual =
+    case find (\a -> isPrefixOf expected a) $ tails actual of
+      Just found -> verifyExpectedAndActualOutputs rest $ drop (length expected) found
+      Nothing -> "\n======== the following expected fragment is not found in the actual results:\n"++ expected ++ "\n========\n"
+* Export.hs
+-- -*- coding: utf-8; -*-
+module Export where
+
+import Model
+import Util
+import Text
+import Control.Monad.Trans.State
+import Control.Monad
+import Data.List
+import Control.Monad (forM_)
+import System.Directory
+import System.IO
+import GHC.IO.Encoding
+import Data.Char
+import Debug.Trace
+
+data ExportMode = ExportPaths | ExportStdOut
+
+exportFromElements :: [Element] -> ExportMode -> IO ()
+exportFromElements elements mode = do
+        case mode of
+          ExportPaths -> truncateFiles elements
+          ExportStdOut -> return ()
+        exportFromElements' elements mode
+
+truncateFiles :: [Element] -> IO ()
+truncateFiles elements =
+  forM_ elements $ \element ->
+    case element of
+      Element "COMMENT" _ _ -> return ()
+      Element _ _ parts -> truncateFiles parts
+      Text props _ _ | hasProp "export" props && hasProp "path" props -> trace "truncate" $ truncateFile $ stringProp "path" props
+      _ -> return ()
+
+truncateFile :: String -> IO ()
+truncateFile "" = return ()
+truncateFile file = do
+  putStrLn $ "truncating " ++ file
+  houtput <- safeOpenFileForWriting file
+  hClose houtput
+
+exportFromElements' :: [Element] -> ExportMode -> IO ()
+exportFromElements' elements mode = do
+  forM_ elements $ \element ->
+    case element of
+      Element "COMMENT" props _ -> return ()
+      Element _ _ elements -> exportFromElements' elements mode
+      Text props _ str ->
+        case (mode,stringProp "path" props,hasProp "stdout" props) of
+             (ExportPaths,"",_)   -> return ()
+             (ExportPaths,file,_) -> writeToFile file $ getContent props str
+             (ExportStdOut,_,True)  -> putStr $ getContent props str
+             (ExportStdOut,_,False)    -> return ()
+      _ -> return ()
+
+writeToFile :: String -> String -> IO ()
+writeToFile file content = do
+  putStrLn $ "Writing " ++ file
+  houtput <- openFile file AppendMode
+  hSetEncoding houtput utf8
+  hPutStr houtput content
+  hClose houtput
+
+getContent props txt = txt
+--  let transformationSpecs =
+--        [ SimpleTransf "onlyascii" onlyAscii
+--        , SimpleTransf "onlylowunicode" onlyLowUnicode
+--        , IntTransf "prependnl" prependnl
+--        , StringListTransf "onlyprefixed" onlyPrefixed
+--        ]
+--      transformationFunctions = map (makeTransfFunction props) transformationSpecs
+--      combinedTransformation = foldr (.) id transformationFunctions
+--  in combinedTransformation txt
+
+* ExtractSrc.hs
+--      filterScalaPrompts xs = filter (\x -> take 7 x == "scala> " || take 7 x == "     | ") xs
+--      filterDollarPrompts xs = filter (\x -> take 2 x == "$ ") xs
+--      filterDollarOrGtPrompts xs = filter (\x -> take 2 x == "$ " || take 2 x == "> ") xs
+--      filterGtPrompts xs = filter (\x -> take 2 x == "> " || take 2 x == "| ") xs
+--         "scala" -> unlines . map (drop 7) . filterScalaPrompts . lines $ filteredHighUnicodes
+--         "cmd" -> unlines . map (drop 2) . filterDollarPrompts . lines $ filteredHighUnicodes
+--         "elm" -> unlines . map (drop 2) . filterGtPrompts . lines $ filteredHighUnicodes
+--         "sbt" -> unlines . map (drop 2) . filterDollarOrGtPrompts . lines $ filteredHighUnicodes
+* RenderLatex.hs
+
+--renderElement (Text props [] txt) =
+--  let transformationSpecs =
+--        [ SimpleTransf "onlyascii" onlyAscii
+--        , SimpleTransf "sourcepng" sourcePng
+--        , SimpleTransf "textpng" textPng
+--        , SimpleTransf "nobreakpl" noBreakPl
+--        , SimpleTransf "newlineasspace" newLineAsSpace
+--        , SimpleTransf "styledtext" styledText
+--        , SimpleTransf "colored" colored
+--        , StringListTransf "green" (addColor "green")
+--        , StringListTransf "red" (addColor "red")
+--        , StringListTransf "blue" (addColor "blue")
+--        , StringListTransf "cyan" (addColor "cyan")
+--        , StringListTransf "magenta" (addColor "magenta")
+--        , StringListTransf "brown" (addColor "brown")
+--        , StringListTransf "gray" (addColor "gray")
+--        , StringListTransf "boldprefixed" boldPrefixed
+--        , SimpleTransf "lmchars" lmChars
+--        , SimpleTransf "references" references
+--        , IntTransf "maxline" divideLongLines
+--        , SimpleTransf "hide" (const "")
+--        ]
+--      transformationFunctions = map (makeTransfFunction props) transformationSpecs
+--      combinedTransformation = foldr (.) id transformationFunctions
+--  in if hasProp "size" props
+--     then "{\\" ++ srcSize (stringProp "size" props) txt ++ " " ++ combinedTransformation txt ++ "}"
+--     else combinedTransformation txt
+
+
+--        if sourceType == "java" then ["interface", "abstract", "final", "match", "private", "public", "protected", "implements", "return", "static"
+--                                      ,"if", "else", "case", "class", "extends", "new", "instanceof", "import"]
+--        else if sourceType == "scala" then ["val", "var", "def", "type", "trait", "abstract", "final", "match", "return", "sealed", "final"
+--                                      ,"if", "else", "case", "class", "object", "extends", "with", "implicit", "new", "import"]
+--        else if sourceType == "elm" then ["module", "where", "import", "type", "alias", "if", "then", "else", "case", "of", "let", " in "]
+latexEnv :: Map.Map String [Element]
+latexEnv = Map.union Map.empty $ Map.fromList
+  [ ("PAUSE",[Include Map.empty "\\pause\n"])
+  , ("CENTER", [Include Map.empty "\\centerline{", AsText Map.empty "title", Args Map.empty, Include Map.empty "}\n"])
+  , ("H1", [Include Map.empty "\\textbf{\\Huge ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}\\par\n"])
+  , ("H2", [Include Map.empty "\\textbf{\\huge ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}\\par\n"])
+  , ("H3", [Include Map.empty "\\textbf{\\LARGE ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}\\par\n"])
+  , ("H4", [Include Map.empty "\\textbf{\\Large ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}\\par\n"])
+  , ("H5", [Include Map.empty "\\textbf{\\large ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}\\par\n"])
+  , ("H6", [Include Map.empty "\\textbf{\\normalsize ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}\\par\n"])
+  , ("C1", [Include Map.empty "\\textbf{\\centerline{\\Huge ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}}\\par\n"])
+  , ("C2", [Include Map.empty "\\textbf{\\centerline{\\huge ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}}\\par\n"])
+  , ("C3", [Include Map.empty "\\textbf{\\centerline{\\LARGE ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}}\\par\n"])
+  , ("C4", [Include Map.empty "\\textbf{\\centerline{\\Large ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}}\\par\n"])
+  , ("C5", [Include Map.empty "\\textbf{\\centerline{\\large ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}}\\par\n"])
+  , ("C6", [Include Map.empty "\\textbf{\\centerline{\\normalsize ", AsText Map.empty "title", Args Map.empty, Include Map.empty "}}\\par\n"])
+  , ("PARA", [Args Map.empty, Include Map.empty "\\par", NewLine Map.empty])
+  , ("SLIDE", [Include Map.empty "\\begin{frame}[fragile]\n", IfDef "title" [Include Map.empty "\\frametitle{", AsText Map.empty "title", Include Map.empty "}\n"], Args Map.empty, Include Map.empty "\\end{frame}\n"])
+  , ("BLOCK", [Include Map.empty "\\begin{block}{", AsText Map.empty "title", Include Map.empty "}\n", Args Map.empty, Include Map.empty "\\end{block}\n"])
+  , ("EXAMPLEBLOCK", [Include Map.empty "\\begin{exampleblock}{", AsText Map.empty "title", Include Map.empty "}\n", Args Map.empty, Include Map.empty "\\end{exampleblock}\n"])
+  , ("DOCUMENTEND", [Include Map.empty "\\end{document}\n"])
+  , ("HEADER1", [Include Map.empty "\\centerline{\\tikz{\\node[scale=1]{", AsText Map.empty "title", Args Map.empty, Include Map.empty "};}}\n"])
+  ]
+
+* Model.hs
+data StringTransfSpec = SimpleTransf String (String -> String)
+                      | StringListTransf String ([String] -> String -> String)
+                      | IntTransf String (Int -> String -> String)
+
+makeTransfFunction props (SimpleTransf name f) = if hasProp name props then f else id
+makeTransfFunction props (StringListTransf name f) = if hasProp name props then f (read (stringProp name props) :: [String]) else id
+makeTransfFunction props (IntTransf name f) = if hasProp name props then f (read (stringProp name props) :: Int) else id
+* Text.hs
+lmChars :: String -> String
+lmChars =
+  let f :: Char -> String -> String
+      f c acc =
+        case c of
+          '!' -> "{\\fontencoding{T1}\\selectfont\\char33}" ++ acc
+          '"' -> "{\\fontencoding{T1}\\selectfont\\char34}" ++ acc
+          '#' -> "{\\fontencoding{T1}\\selectfont\\char35}" ++ acc
+          '$' -> "{\\fontencoding{T1}\\selectfont\\char36}" ++ acc
+          '%' -> "{\\fontencoding{T1}\\selectfont\\char37}" ++ acc
+          '&' -> "{\\fontencoding{T1}\\selectfont\\char38}" ++ acc
+          '<' -> "{\\fontencoding{T1}\\selectfont\\char60}" ++ acc
+          '>' -> "{\\fontencoding{T1}\\selectfont\\char62}" ++ acc
+          '\'' -> "{\\fontencoding{T1}\\selectfont\\char39}" ++ acc
+          '\\' -> "{\\fontencoding{T1}\\selectfont\\char92}" ++ acc
+          '^' -> "{\\fontencoding{T1}\\selectfont\\char94}" ++ acc
+          '_' -> "{\\fontencoding{T1}\\selectfont\\char95}" ++ acc
+          '`' -> "{\\fontencoding{T1}\\selectfont\\char0}" ++ acc
+          '{' -> "{\\fontencoding{T1}\\selectfont\\char123}" ++ acc
+          '|' -> "{\\fontencoding{T1}\\selectfont\\char124}" ++ acc
+          '}' -> "{\\fontencoding{T1}\\selectfont\\char125}" ++ acc
+          '~' -> "{\\fontencoding{T1}\\selectfont\\char126}" ++ acc
+          '¶' -> "{\\par}" ++ acc
+          '×' -> "{\\fontencoding{QX}\\selectfont\\char169}" ++ acc
+          '⋆' -> "*" ++ acc
+          'Δ' -> "{\\fontencoding{QX}\\selectfont\\char1}" ++ acc
+          'Π' -> "{\\fontencoding{QX}\\selectfont\\char5}" ++ acc
+          'Σ' -> "{\\fontencoding{QX}\\selectfont\\char6}" ++ acc
+          'Ω' -> "{\\fontencoding{TS1}\\selectfont\\char87}" ++ acc
+          '–' -> "--" ++ acc
+          '—' -> "---" ++ acc
+          '‖' -> "\\pause\n" ++ acc
+          '…' -> "{\\fontencoding{QX}\\selectfont\\char8}" ++ acc
+          '℃' -> "{\\fontencoding{TS1}\\selectfont\\char137}" ++ acc
+          '←' -> "{\\fontencoding{TS1}\\selectfont\\char24}" ++ acc
+          '→' -> "{\\fontencoding{TS1}\\selectfont\\char25}" ++ acc
+          '−' -> "{\\fontencoding{TS1}\\selectfont\\char61}" ++ acc
+          '∞' -> "{\\fontencoding{QX}\\selectfont\\char173}" ++ acc
+          _ -> c:acc
+  in foldr f ""
+
+* RenderMultiHtml.hs
+-- writeMultiHtml :: Map.Map String [Element] -> String -> ReaderT [Element] IO ()
+-- writeMultiHtml env outputPath = do
+--   allElements <- ask
+--   let chapters = filter isChapter allElements
+--   outputCss env outputPath
+--   writeToc env outputPath chapters
+--   liftIO $ writeChapters env outputPath allElements "toc" chapters
+--   let title = "" -- init $ renderElements env allElements $ evalElements env [Element "Title" Map.empty []]
+--   let indexPageContent = "" -- renderElements env allElements $ evalElements env [Element "IndexHtmlPageContent" Map.empty []]
+--   writePage env outputPath "index" title indexPageContent "" "index" "toc"
+-- 
+-- writeToc :: Map.Map String [Element] -> String -> [Element] -> ReaderT [Element] IO ()
+-- writeToc env outputPath chapters = do
+--   allElements <- ask
+--   let path = outputPath ++ "/toc.html"
+--   houtput <- liftIO $ safeOpenFileForWriting path
+--   let tableOfContents = "" --init $ renderElements env allElements $ evalElements env [Element "TableOfContents" Map.empty []]
+--   let chapterLinks = chapters >>= (\chapter -> runReader (renderChapterLink env chapter) allElements)
+--   let content = "<h1>" ++ tableOfContents ++ "</h1>\n<ul class='toc'>\n" ++ chapterLinks ++ "</ul>\n"
+--   let (Element _ props _) = head chapters
+--   let right = idProp (stringProp2 "title" props) props
+--   let footer = "" --renderElements env allElements $ evalElements env [Element "MultiHtmlFooter" Map.empty []]
+--   let output = page "Spis treści" content "index" "index" right footer
+--   liftIO $ putStrLn $ "Generating " ++ path
+--   liftIO $ hPutStr houtput output
+--   liftIO $ hClose houtput
+-- 
+-- renderChapterLink :: Map.Map String [Element] -> Element -> Reader [Element] String
+-- renderChapterLink env (Element "CHAPTER" props elements) = do
+--   let title = stringProp2 "title" props
+--   chTitle <- chapterTitle env title elements
+--   return $ "<li><a href='" ++ (idProp title props) ++ ".html'>" ++ chTitle ++ "</a>\n"
+-- renderChapterLink _ _ = return ""
+-- 
+-- writeChapters :: Map.Map String [Element] -> String -> [Element] -> String -> [Element] -> IO ()
+-- writeChapters env outputPath allElements previousId chapters =
+--   case chapters of
+--     ch@(Element "CHAPTER" props sections):nextChapters -> do
+--       writeChapter env outputPath allElements (stringProp2 "title" props) props sections previousId nextChapters
+--       writeChapters env outputPath allElements (getLastId ch sections) nextChapters
+--     _ -> return ()
+-- 
+-- getLastId (Element "CHAPTER" props _) [] = idProp (stringProp2 "title" props) props
+-- getLastId (Element "CHAPTER" props _) ((Element "SECTION" sProps _):[]) = (idProp (stringProp2 "title" props) props) ++ "_" ++ (idProp (stringProp2 "title" sProps) sProps)
+-- getLastId ch (_:sections) = getLastId ch sections
+-- 
+-- writeChapter :: Map.Map String [Element] -> String -> [Element] -> String -> [Prop] -> [Element] -> String -> [Element] -> IO ()
+-- writeChapter env outputPath allElements title props chapterElements previousId nextChapters = do
+--   let chId = idProp title props
+--   let chLabel = stringProp2 "label" props
+--   let content = runReader (renderChapterContent env title props chapterElements) allElements
+--   let left = previousId
+--   let right = headElementId chId $ (sectionsOnly chapterElements) ++ nextChapters
+--   runReaderT (writePage env outputPath chId title content left "toc" right) allElements
+--   writeSections env outputPath allElements chId chLabel chId chapterElements nextChapters
+-- 
+-- writePage :: Map.Map String [Element] -> String -> String -> String -> String -> String -> String -> String -> ReaderT [Element] IO ()
+-- writePage env outputPath name title content left up right = do
+--   allElements <- ask
+--   let path = outputPath ++ "/" ++ name ++ ".html"
+--   houtput <- liftIO $ safeOpenFileForWriting path
+--   let footer = "" -- renderElements env allElements $ evalElements env [Element "MultiHtmlFooter" []]
+--   let output = page title content left up right footer
+--   liftIO $ putStrLn $ "Generating file " ++ path ++ " left: " ++ left ++ " right: " ++ right
+--   liftIO $ hPutStr houtput output
+--   liftIO $ hClose houtput
+-- 
+-- headElementId chId parts =
+--   case parts of
+--     (Element "SECTION" props):_ -> chId ++ "_" ++ idProp (stringProp2 "title" props) props
+--     (Element "CHAPTER" props):_ -> idProp (stringProp2 "title" props) props
+--     _:next -> headElementId chId next
+--     [] -> ""
+-- 
+-- writeSections :: Map.Map String [Element] -> String -> [Element] -> String -> String -> String -> [Element] -> [Element] -> IO ()
+-- writeSections env outputPath allElements chId chLabel previousId sections nextChapters = do
+--   case sections of
+--     sec@(Element "SECTION" parts):nextSections -> do
+--       writeSection env outputPath allElements chId chLabel (stringProp2 "title" parts) parts parts previousId nextSections nextChapters
+--       writeSections env outputPath allElements chId chLabel (chId ++ "_" ++ idProp (stringProp2 "title" parts) parts) nextSections nextChapters
+--     (_:nextSections) ->
+--       writeSections env outputPath allElements chId chLabel previousId nextSections nextChapters
+--     [] -> return ()
+-- 
+-- writeSection :: Map.Map String [Element] -> String -> [Element] -> String -> String -> String -> [Prop] -> [Element] -> String -> [Element] -> [Element] -> IO ()
+-- writeSection env outputPath allElements chId chLabel title props parts previousId nextSections nextChapters = do
+--   let path = outputPath ++ "/" ++ chId ++ "_" ++ (idProp title props) ++ ".html"
+--   houtput <- safeOpenFileForWriting path
+--   let content = renderElement env allElements (Element "SECTION" (Map.singleton "title" (sectionTitle chLabel title props)) parts)
+--   let left = previousId
+--   let right = headElementId chId $ nextSections++nextChapters
+--   let footer = "" -- renderElements env allElements $ evalElements env [Element "MultiHtmlFooter" []]
+--   let output = page title content left chId right footer
+--   putStrLn $ "Generating section " ++ path ++ " left: " ++ left ++ " right: " ++ right
+--   hPutStr houtput output
+--   hClose houtput
+-- 
+-- page :: String -> String -> String -> String -> String -> String -> String
+-- page title content prev up next footer =
+--   "<html>\n\
+--   \  <head>\n\
+--   \  <title>" ++ title ++ "</title>\n\
+--   \  <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>\n\
+--   \  <style type='text/css'>@import url(web.css)</style>\n\
+--   \  </head>\n\
+--   \  <body>\n\
+--   \    <div class='navig'>\n\
+--   \      " ++ (if prev /= "" then "<a class='left' href='" ++ prev ++ ".html'><svg width='50' height='50'><polygon points='0 25,20 10,20 20,50 20,50 30,20 30,20 40'/></svg></a>" else "") ++ "\n\
+--   \      " ++ (if next /= "" then "<a class='right' href='" ++ next ++ ".html'><svg width='50' height='50'><polygon points='50 25,30 10,30 20,0 20,0 30,30 30,30 40'/></svg></a>" else "") ++ "\n\
+--   \      " ++ (if up /= "" then "<a href='" ++ up ++ ".html'><svg width='50' height='50'><polygon points='25 0,10 20,20 20,20 50,30 50,30 20,40 20'/></a>" else "") ++ "\n\
+--   \    </div>\n\
+--   \    <div class='content'>\n" ++ content ++ "\n</div>\n" ++ footer ++ "\n  </body>\n\
+--   \</html>\n"
+-- 
+-- containerElement :: Element -> Bool
+-- containerElement (Element "CHAPTER" _) = True
+-- containerElement (Element "SECTION" _) = True
+-- containerElement _ = False
+-- 
+-- nonContainerElement = not . containerElement
+-- 
+-- chapterTitle :: Map.Map String [Element] -> [Char] -> [Prop] -> Reader [Element] [Char]
+-- chapterTitle env title props = do
+--   allElements <- ask
+--   let label = stringProp2 "label" props
+--   let chapterName = "" -- init $ renderElements env allElements $ evalElements env [Element "Chapter" []]
+--   let appendixName = "" -- init $ renderElements env allElements $ evalElements env [Element "Appendix" []]
+--   let prefix =
+--         if label == "" then ""
+--         else if isDigit (head label) then chapterName ++ " " ++ label ++ ". "
+--         else appendixName ++" " ++ label ++ ". "
+--   return $ prefix ++ title
+-- 
+-- 
+-- sectionTitle chapterLabel title props =
+--   let label = stringProp2 "label" props
+--       prefix =
+--         if label == "" || chapterLabel == "" then ""
+--         else chapterLabel ++ "." ++ label ++ ". "
+--   in
+--     prefix ++ title
+-- 
+-- renderChapterContent :: Map.Map String [Element] -> String -> [Prop] -> [Element] -> Reader [Element] String
+-- renderChapterContent env title props parts = do
+--   allElements <- ask
+--   let chId = idProp title props
+--   let chLabel = stringProp2 "label" props
+--   chTitle <- chapterTitle env title props
+--     renderElements env allElements (filter nonContainerElement parts) ++
+--     "<ul class='toc'>\n" ++
+--     concat (fmap (renderSectionLink chId chLabel) parts) ++
+--     "</ul>\n"
+-- 
+-- renderSectionLink chId chLabel (Element "SECTION" props) =
+--   "<li><a href='" ++ chId ++ "_" ++ (idProp (stringProp2 "title" props) props) ++ ".html'>" ++ sectionTitle chLabel (stringProp2 "title" props) props ++ "</a>\n"
+-- renderSectionLink _ _ _ = ""
+-- 
+-- renderElements :: Map.Map String [Element] -> [Element] -> [Element] -> String
+-- renderElements env allElements parts = concat (fmap (renderElement env allElements) parts)
+-- 
+-- renderElement :: Map.Map String [Element] -> [Element] -> Element -> String
+-- renderElement env _ (Element "CHAPTER" parts) = ""
+-- renderElement env allElements (Element "SECTION" parts) =
+--   "<h2 class='section'>" ++ (stringProp2 "title" parts) ++ "</h2>\n" ++
+--   renderElements env allElements parts
+-- renderElement env allElements (Src srcType props src) =
+--   let boldCommand prefix line =
+--         if (take (length prefix) line == prefix) then prefix ++ "<b>" ++ drop (length prefix) line ++ "</b>"
+--         else line
+--       boldCommands prefix = unlines . map (boldCommand prefix) . lines
+--       fileName = pathFileName props
+--       fileLabel = "" -- init $ renderElements env allElements $ evalElements env [Element "File" []]
+--   in 
+--     if hasProp1 "norender" props
+--     then ""
+--     else case stringProp2 "console" props of
+--            "cmd" -> "<pre>" ++ boldCommands "$ " (renderSource srcType props src) ++ "</pre>\n"
+--            "elm" -> "<pre>" ++ boldCommands "&gt; " (renderSource srcType props src) ++ "</pre>\n"
+--            "scala" -> "<pre>" ++ boldCommands "scala&gt; " (renderSource srcType props src) ++ "</pre>\n"
+--            _ ->
+--              "<pre>" ++
+--              (if fileName == ""
+--                 then ""
+--                 else "<img class='filesign' src='filesign.png'/><b>" ++ fileLabel ++ " " ++ fileName ++
+--                   (if hasProp1 "fragment" props then " (fragment)" else "") ++ ":</b>\n") ++
+--               renderSource srcType props src ++ "</pre>\n"
+-- renderElement env allElements (Table props rows) =
+--   "<table>" ++ concat (map renderTableRow rows) ++ "</table>\n"
+-- 
+-- renderTableRow (RegularRow cells) =
+--   "<tr>" ++ concat (map renderTableCell cells) ++ "</tr>\n"
+-- renderTableRow _ = ""
+-- 
+-- renderTableCell cell =
+--   "<td>" ++ cell ++ "</td>"
+-- 
+-- renderText :: [Element] -> String -> String
+-- renderText allElements txt =
+--   foldr f "" txt
+--   where f :: Char -> String -> String
+--         f c acc =
+--           case (c, break (c ==) acc) of
+--             ('⒰',(url,_:acc')) -> "<a href='" ++ url ++ "'>" ++ url ++ "</a>" ++ acc'
+--             ('⒭',(ref,_:acc')) ->
+--               case break (','==) ref of
+--                 (chId,[]) -> chapterReference (filter isChapter allElements) chId ++ acc'
+--                 (chId,_:secId) -> sectionReference (filter isChapter allElements) chId secId ++ acc'
+--             _ -> c:acc
+-- 
+-- ----------------------------------------------------
+-- 
+-- chapterReference :: [Element] -> String -> (String)
+-- chapterReference parts chapterId =
+--   case parts of
+--     (Element "CHAPTER" props):tailElements ->
+--       let chId = idProp (stringProp2 "title" props) props
+--           chLabel = stringProp2 "label" props
+--       in
+--           if chId == chapterId
+--           then "<a href='" ++ chId ++".html'>" ++ chLabel ++ "</a>"
+--           else chapterReference tailElements chapterId
+--     _ -> error $ "Unable to find chapter reference for chapter id: " ++ chapterId
+-- 
+-- sectionReference :: [Element] -> String -> String -> (String)
+-- sectionReference parts chapterId sectionId = --"xxxx"++chapterId++"cccc"++sectionId++"vvvv"
+--   case parts of
+--     (Element "CHAPTER" chapterElements):tailElements ->
+--       let chId = idProp (stringProp2 "title" chapterElements) chapterElements
+--           chLabel = stringProp2 "label" chapterElements
+--       in
+--           if chId == chapterId
+--           then sectionReference' chapterElements chId chLabel sectionId
+--           else sectionReference tailElements chapterId sectionId
+--     _ -> error $ "Unable to find chapter/section reference for chapter/section: " ++ chapterId ++ "," ++ sectionId
+-- 
+-- sectionReference' :: [Element] -> String -> String -> String -> (String)
+-- sectionReference' parts chapterId chapterLabel sectionId =
+--   case parts of
+--     (Element "SECTION" props):tailElements ->
+--       let secId = idProp (stringProp2 "title" props) props
+--           secLabel = stringProp2 "label" props
+--       in
+--           if secId == sectionId
+--           then "<a href='" ++ chapterId ++ "_" ++ secId ++".html'>" ++ chapterLabel ++ "." ++ secLabel ++ "</a>"
+--           else sectionReference' tailElements chapterId chapterLabel sectionId
+--     _:tailElements -> sectionReference' tailElements chapterId chapterLabel sectionId
+--     _ -> error $ "Unable to find section reference within chapter " ++ chapterId ++ " for section id: " ++ sectionId
+* Main.hs
+mainWithArgs ["exportstdout",path] =
+  exportCommand Map.empty path ExportStdOut Map.empty
+mainWithArgs ["exportstdout",path,level1id] =
+  exportCommand Map.empty path ExportStdOut (Map.fromList [("level1id",level1id)])
+mainWithArgs ["exportstdout",path,level1id,level2id] =
+  exportCommand Map.empty path ExportStdOut (Map.fromList [("level1id",level1id),("level2id",level2id)])
+mainWithArgs ["exportpaths",path] =
+  exportCommand Map.empty path ExportPaths Map.empty
+mainWithArgs ["exportpaths",path,level1id] =
+  exportCommand Map.empty path ExportPaths (Map.fromList [("level1id",level1id)])
+mainWithArgs ["exportpaths",path,level1id,level2id]
+  = exportCommand Map.empty path ExportPaths (Map.fromList [("level1id",level1id),("level2id",level2id)])
