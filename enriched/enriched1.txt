@@ -1,11 +1,11 @@
 Content-Type: text/enriched
 Text-Width: 70
 
-<bold>niewidoczna-</bold>
+* niewidoczna
 
 niewidoczny tekst
 
-<bold>sekcja1</bold>
+* sekcja1+
 
 
 proba

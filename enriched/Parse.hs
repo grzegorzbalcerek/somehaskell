@@ -30,7 +30,7 @@ eSection = do
 
 eSectionHeader :: P (Visibility, String)
 eSectionHeader = do
-  title <- string "<bold>" *> many1 (noneOf "<\n\r") <* string "</bold>" <* endOfLine
+  title <- many1 (oneOf "*") *> space *> many1 (noneOf "<\n\r") <* endOfLine
   return $ if "+" `isSuffixOf` title then (Visible, dropWhileEnd (=='+') title) else (Hidden, title)
 
 eSegment :: Int -> P ESegment

@@ -1,12 +1,12 @@
 Content-Type: text/enriched
 Text-Width: 70
 
-<bold>sekcja1</bold>
+* sekcja1
 
 
-<x-color><param>cyan</param>Ἑτοιμάσατε τὴν ὁδὸν Κυρίου,
+<x-color><param>cyan</param>aaaa
 
-εὐθείας ποιεῖτε τὰς τρίβους αὐτοῦ</x-color>,
+bbbb</x-color>,
 
 
 proba2
