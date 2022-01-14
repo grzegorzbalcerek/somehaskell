@@ -17,7 +17,7 @@ parseEnrichedInput :: String -> String -> Either ParseError EDoc
 parseEnrichedInput inputPath input = runParser eDoc () inputPath input
 
 eDoc :: P EDoc
-eDoc = eDocHeader *> many (eSection <|> eSegment 0) <* eof
+eDoc = eDocHeader *> many (eSection <|> eSegment) <* eof
 
 eDocHeader :: P ()
 eDocHeader = string "Content-Type: text/enriched" >> endOfLine >> string "Text-Width: 70" >> endOfLine >> endOfLine >> return ()
@@ -25,7 +25,7 @@ eDocHeader = string "Content-Type: text/enriched" >> endOfLine >> string "Text-W
 eSection :: P ESegment
 eSection = do
   (visibility, title) <- eSectionHeader
-  segments <- many1 (eSegment 0)
+  segments <- many1 (eSegment)
   return $ ESection visibility title segments
 
 eSectionHeader :: P (Visibility, String)
@@ -33,20 +33,18 @@ eSectionHeader = do
   title <- many1 (oneOf "*") *> string " " *> many1 (noneOf "<\n\r") <* endOfLine
   return $ if "+" `isSuffixOf` title then (Visible, dropWhileEnd (=='+') title) else (Hidden, title)
 
-eSegment :: Int -> P ESegment
-eSegment n =
-  (try (eFrame n) <|>
-   try (eEmptyFrame n) <|>
+eSegment :: P ESegment
+eSegment =
+  (try (eFrame 0 "-=") <|>
    try (eEmptyLines) <|>
    try (eEmptyLine) <|>
-   try (eDottedLine n) <|>
-   try (eSolidLine n) <|>
-   eLine n )
+   try (eDottedLine 0) <|>
+   try (eSolidLine 0) <|>
+   eLine 0)
 
-eFrameContent :: Int -> P ESegment
-eFrameContent n =
-  (try (eFrame (n+1)) <|>
---   try (eEmptyFrame (n+1)) <|>
+eFrameContent :: Int -> String -> P ESegment
+eFrameContent n frameMarker =
+  (try (eFrame (n+1) frameMarker) <|>
    try (eEmptyLines) <|>
    try (eEmptyLine) <|>
    try (eDottedLine n) <|>
@@ -56,9 +54,8 @@ eFrameContent n =
 eLine :: Int -> P ESegment
 eLine n = do
   notFollowedBy (try eSectionHeader)
-  notFollowedBy (try (eEmptyFrame n))
-  notFollowedBy (try (eFrameBegin n))
-  notFollowedBy (try (eFrameEnd n))
+  notFollowedBy (try (eFrameBegin n "=-"))
+  notFollowedBy (try (eFrameEnd n "=-"))
   skipSpaces n
   content <- many eText
   endOfLine
@@ -70,40 +67,33 @@ eEmptyLines = endOfLine >> many1 endOfLine >> return EEmptyLines
 eEmptyLine :: P ESegment
 eEmptyLine = endOfLine >> return EEmptyLine
 
-eFrame :: Int -> P ESegment
-eFrame n = do
-  (n', maybeTitle) <- try (eFrameBegin n)
+eFrame :: Int -> String -> P ESegment
+eFrame n possibleFrameMarkers = do
+  (n', frameMarker, maybeTitle) <- try (eFrameBegin n possibleFrameMarkers)
   let newN = n + n'
-  content <- many (eFrameContent newN)
-  optional (try (eFrameEnd newN))
+  content <- many (eFrameContent newN frameMarker)
+  optional (try (eFrameEnd newN frameMarker))
   return $ EFrame newN maybeTitle content
 
-eEmptyFrame :: Int -> P ESegment
-eEmptyFrame n = do
+eFrameBegin :: Int -> String -> P (Int, String, (Maybe String))
+eFrameBegin n allowedFrameChars = do
   skipSpaces n
   additionalSpaces <- many (string " ")
-  string "+==="
+  string "+"
+  frameChar <- count 1 (oneOf allowedFrameChars)
+  count 2 (string frameChar)
   maybeTitle <- optionMaybe (many1 (noneOf "\n\r"))
   endOfLine
-  return $ EFrame (n + length additionalSpaces) maybeTitle []
+  return $ (length additionalSpaces, frameChar, maybeTitle)
 
-eFrameBegin :: Int -> P (Int, (Maybe String))
-eFrameBegin n = do
-  skipSpaces n
-  additionalSpaces <- many (string " ")
-  string "+---"
-  maybeTitle <- optionMaybe (many1 (noneOf "\n\r"))
-  endOfLine
-  return $ (length additionalSpaces, maybeTitle)
-
-eFrameEnd :: Int -> P ()
-eFrameEnd n = skipSpaces n *> string "+---" *> endOfLine *> return ()
+eFrameEnd :: Int -> String -> P ()
+eFrameEnd n marker = skipSpaces n *> string "+" *> count 3 (string marker) *> endOfLine *> return ()
 
 eSolidLine :: Int -> P ESegment
-eSolidLine n = skipSpaces n *> optional (many1 space) *> string "---" *> endOfLine *> return (ESolidLine n)
+eSolidLine n = skipSpaces n *> optional (many1 (string " ")) *> string "---" *> endOfLine *> return (ESolidLine n)
 
 eDottedLine :: Int -> P ESegment
-eDottedLine n = skipSpaces n *> optional (many1 space) *> string "..." *> endOfLine *> return (EDottedLine n)
+eDottedLine n = skipSpaces n *> optional (many1 (string " ")) *> string "..." *> endOfLine *> return (EDottedLine n)
 
 skipSpaces :: Int -> P ()
 skipSpaces n = count n (string " ") *> return ()
