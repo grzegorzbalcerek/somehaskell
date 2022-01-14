@@ -59,17 +59,19 @@ eEmptyLine = endOfLine >> return EEmptyLine
 
 eFrame :: Int -> P ESegment
 eFrame n = do
-  n' <- try (eFrameBegin n)
+  (n', maybeTitle) <- try (eFrameBegin n)
   let newN = n + n'
   content <- many1 (eSegment newN) <* eFrameEnd newN
-  return $ EFrame newN content
+  return $ EFrame newN maybeTitle content
 
-eFrameBegin :: Int -> P Int
+eFrameBegin :: Int -> P (Int, (Maybe String))
 eFrameBegin n = do
   skipSpaces n
   additionalSpaces <- many space
-  string "+---" <* endOfLine
-  return $ length additionalSpaces
+  string "+---"
+  maybeTitle <- optionMaybe (many1 (noneOf "\n\r"))
+  endOfLine
+  return $ (length additionalSpaces, maybeTitle)
 
 eFrameEnd :: Int -> P ()
 eFrameEnd n = skipSpaces n *> string "+---" *> endOfLine *> return ()
@@ -90,7 +92,7 @@ eText = (
     eItalic <|>
     eSmall <|>
     try eColored <|>
-    eNumPlus <|>
+    try eNumPlus <|>
     eString )
 
 eBold :: P EText
@@ -132,8 +134,8 @@ eColored = do
 eNumPlus :: P EText
 eNumPlus = do
   num <- many1 (oneOf "0123456789")
-  maybeSpace1 <- optionMaybe space
-  maybeSpace2 <- optionMaybe space
+  maybeSpace1 <- optionMaybe (string " ")
+  maybeSpace2 <- optionMaybe (string " ")
   case (maybeSpace1, maybeSpace2) of
     (Nothing,_) -> return $ EString num
     (Just _,Nothing) -> return $ ENumberSpace num

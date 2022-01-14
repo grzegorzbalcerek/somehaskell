@@ -21,8 +21,8 @@ renderSegment (EDottedLine n) = replicate n ' ' ++ "..."
 renderSegment (ESolidLine n) = replicate n ' ' ++ "---"
 renderSegment (ESection visibility title segments) = "ESection " ++ show visibility ++ " " ++ title ++ "\n" ++ renderSegments segments
 renderSegment (ELine n texts) = replicate n ' ' ++ "ELine " ++ show n ++ ": " ++ renderTexts texts
-renderSegment (EFrame n segments) =
-   replicate n ' ' ++ "+--- " ++ show n ++ ":\n" ++ renderSegments segments ++ "\n" ++ replicate n ' ' ++ "+---"
+renderSegment (EFrame n maybeTitle segments) =
+   replicate n ' ' ++ "+--- " ++ show n ++ " " ++ show maybeTitle ++ ":\n" ++ renderSegments segments ++ "\n" ++ replicate n ' ' ++ "+---"
 
 renderTexts :: [EText] -> String
 renderTexts texts = concat $ " " `intersperse` map renderText texts

@@ -123,11 +123,12 @@ renderSegment :: (Double, Double) -> ESegment -> ((Double, Double), String)
 renderSegment (x,y) EEmptyLine = ((0,0),"")
 renderSegment (x,y) EEmptyLines = ((0,halfLineSize),"")
 renderSegment _ (ESection visibility title segments) =
-    let ((w,h),o) = renderSegments (startPosX, startPosY) segments
+    let ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
         id = title `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
         g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" title ++ argVisibility visibility ++ ">\n"
+        t = "<text style='font-weight:bold'" ++ argXY (startPosX, startPosY) ++ ">" ++ title ++ "</text>\n"
         g2 = "</g>\n"
-    in ((w,h), g1 ++ o ++ g2)
+    in ((w,h + lineSize), g1 ++ t ++ o ++ g2)
 renderSegment (x,y) (ELine n texts) =
     let o = "<text" ++ argXY (x,y) ++ ">" ++ renderTexts texts ++ "</text>\n"
     in ((fromIntegral (length (show texts)), lineSize), o)
@@ -135,13 +136,18 @@ renderSegment (x,y) (EDottedLine n) =
   ((0, halfLineSize), renderSeparatorLine dottedLineStyle (x,y) n)
 renderSegment (x,y) (ESolidLine n) =
   ((0, halfLineSize), renderSeparatorLine solidLineStyle (x,y) n)
-renderSegment (x,y) (EFrame n segments) =
-    let ((ws,hs),os) = renderSegments (startPosX + fromIntegral n,y + halfLineSize) segments
+renderSegment (x,y) (EFrame n maybeTitle segments) =
+    let ((_,ht),t) = renderMaybeString (startPosX + fromIntegral n,y + halfLineSize) maybeTitle
+        ((ws,hs),os) = renderSegments (startPosX + fromIntegral n,y + halfLineSize + ht) segments
         rect = "<rect " ++ rectStyle ++
                argXY (startPosX + fromIntegral n - 0.5,y - halfLineSize) ++
-               argWidthHeight (fromIntegral 200 - fromIntegral n * 2.0,hs+halfLineSize) ++
+               argWidthHeight (fromIntegral 200 - fromIntegral n * 2.0,ht+hs+halfLineSize) ++
                 "/>\n"
-    in ((ws, hs + lineSize), rect ++ os)
+    in ((ws, ht + hs + lineSize), rect ++ t ++ os)
+
+renderMaybeString :: (Double, Double) -> Maybe String -> ((Double, Double), String)
+renderMaybeString _ Nothing = ((0,0),"")
+renderMaybeString (x,y) (Just title) = ((0,lineSize),"<text style='font-weight:bold'" ++ argXY (x,y) ++ ">" ++ title ++ "</text>\n")
 
 renderSeparatorLine :: String -> (Double, Double) -> Int -> String
 renderSeparatorLine style (x,y) n =
