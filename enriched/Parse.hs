@@ -69,22 +69,22 @@ eEmptyLine = endOfLine >> return EEmptyLine
 
 eFrame :: Int -> String -> P ESegment
 eFrame n possibleFrameMarkers = do
-  (n', frameMarker, maybeTitle) <- try (eFrameBegin n possibleFrameMarkers)
+  (n', frameMarker, title) <- try (eFrameBegin n possibleFrameMarkers)
   let newN = n + n'
   content <- many (eFrameContent newN frameMarker)
   optional (try (eFrameEnd newN frameMarker))
-  return $ EFrame newN maybeTitle content
+  return $ EFrame newN title content
 
-eFrameBegin :: Int -> String -> P (Int, String, (Maybe String))
+eFrameBegin :: Int -> String -> P (Int, String, [EText])
 eFrameBegin n allowedFrameChars = do
   skipSpaces n
   additionalSpaces <- many (string " ")
   string "+"
   frameChar <- count 1 (oneOf allowedFrameChars)
   count 2 (string frameChar)
-  maybeTitle <- optionMaybe (many1 (noneOf "\n\r"))
+  title <- many eText
   endOfLine
-  return $ (length additionalSpaces, frameChar, maybeTitle)
+  return $ (length additionalSpaces, frameChar, title)
 
 eFrameEnd :: Int -> String -> P ()
 eFrameEnd n marker = skipSpaces n *> string "+" *> count 3 (string marker) *> endOfLine *> return ()

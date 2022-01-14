@@ -16,7 +16,7 @@ data ESegment =
   EDottedLine Int |
   ESolidLine Int |
   ELine Int [EText] |
-  EFrame Int (Maybe String) [ESegment] |
+  EFrame Int [EText] [ESegment] |
   ESection Visibility [EText] [ESegment]
   deriving (Eq,Show)
 
