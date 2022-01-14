@@ -30,7 +30,7 @@ eSection = do
 
 eSectionHeader :: P (Visibility, [EText])
 eSectionHeader = do
-  title <- many1 (oneOf "*") *> string " " *> many eText <* endOfLine
+  title <- many1 (oneOf "*") *> string " " *> many (eText eStringNumPlusFactory) <* endOfLine
   return $ if "+" `isSuffixOf` (stringifyTexts title) then (Visible, title) else (Hidden, title)
 
 eSegment :: P ESegment
@@ -57,7 +57,7 @@ eLine n = do
   notFollowedBy (try (eFrameBegin n "=-"))
   notFollowedBy (try (eFrameEnd n "=-"))
   skipSpaces n
-  content <- many eText
+  content <- many (eText ENumberSpace)
   endOfLine
   return $ ELine n content
 
@@ -82,7 +82,7 @@ eFrameBegin n allowedFrameChars = do
   string "+"
   frameChar <- count 1 (oneOf allowedFrameChars)
   count 2 (string frameChar)
-  title <- many eText
+  title <- many (eText eStringNumPlusFactory)
   endOfLine
   return $ (length additionalSpaces, frameChar, title)
 
@@ -98,28 +98,28 @@ eDottedLine n = skipSpaces n *> optional (many1 (string " ")) *> string "..." *>
 skipSpaces :: Int -> P ()
 skipSpaces n = count n (string " ") *> return ()
 
-eText :: P EText
-eText = (
+eText :: (String -> EText) -> P EText
+eText numPlusFactory = (
     eLt <|>
-    eBold <|>
-    eItalic <|>
-    eSmall <|>
-    try eColored <|>
-    try eNumPlus <|>
+    (eBold numPlusFactory) <|>
+    (eItalic numPlusFactory) <|>
+    (eSmall numPlusFactory) <|>
+    try (eColored numPlusFactory) <|>
+    try (eNumPlus numPlusFactory) <|>
     eString )
 
-eBold :: P EText
-eBold = EBold <$> try (string "<bold>" *> many1 eText <* string "</bold>")
+eBold :: (String -> EText) -> P EText
+eBold numPlusFactory = EBold <$> try (string "<bold>" *> many1 (eText numPlusFactory) <* string "</bold>")
 
-eItalic :: P EText
-eItalic = EItalic <$> try (string "<italic>" *> many1 eText <* string "</italic>")
+eItalic :: (String -> EText) -> P EText
+eItalic numPlusFactory = EItalic <$> try (string "<italic>" *> many1 (eText numPlusFactory) <* string "</italic>")
 
-eSmall :: P EText
-eSmall = ESmall <$> try (string "<x-display><param>" *>
+eSmall :: (String -> EText) -> P EText
+eSmall numPlusFactory = ESmall <$> try (string "<x-display><param>" *>
                      many (try (string "(disable-eval ")) *>
                      string "(height 0.5)" *>
                      many (try (string ")")) *>
-                     string "</param>" *> many1 eText <* string "</x-display>")
+                     string "</param>" *> many1 (eText numPlusFactory) <* string "</x-display>")
 
 eColor :: P EColor
 eColor = string "<param>" *> (
@@ -136,23 +136,26 @@ eColor = string "<param>" *> (
   try (string "dark violet" >> return DarkViolet)
   ) <* string "</param>"
 
-eColored :: P EText
-eColored = do
+eColored :: (String -> EText) -> P EText
+eColored numPlusFactory = do
   string "<x-color>"
   color <- eColor
-  texts <- many1 eText
+  texts <- many1 (eText numPlusFactory)
   string "</x-color>"
   return $ EColored color texts
 
-eNumPlus :: P EText
-eNumPlus = do
+eNumPlus :: (String -> EText) -> P EText
+eNumPlus numPlusFactory = do
   num <- many1 (oneOf "0123456789")
   maybeSpace1 <- optionMaybe (string " ")
   maybeSpace2 <- optionMaybe (string " ")
   case (maybeSpace1, maybeSpace2) of
     (Nothing,_) -> return $ EString num
-    (Just _,Nothing) -> return $ ENumberSpace num
+    (Just _,Nothing) -> return $ numPlusFactory num
     (Just _, Just _) -> return $ EString (num ++ "  ")
+
+eStringNumPlusFactory :: String -> EText
+eStringNumPlusFactory str = EString (str ++ " ")
 
 eString :: P EText
 eString = EString <$> many1 (noneOf "<0123456789\n\r")
