@@ -30,7 +30,7 @@ eSection = do
 
 eSectionHeader :: P (Visibility, String)
 eSectionHeader = do
-  title <- many1 (oneOf "*") *> space *> many1 (noneOf "<\n\r") <* endOfLine
+  title <- many1 (oneOf "*") *> string " " *> many1 (noneOf "<\n\r") <* endOfLine
   return $ if "+" `isSuffixOf` title then (Visible, dropWhileEnd (=='+') title) else (Hidden, title)
 
 eSegment :: Int -> P ESegment
@@ -43,10 +43,22 @@ eSegment n =
    try (eSolidLine n) <|>
    eLine n )
 
+eFrameContent :: Int -> P ESegment
+eFrameContent n =
+  (try (eFrame (n+1)) <|>
+--   try (eEmptyFrame (n+1)) <|>
+   try (eEmptyLines) <|>
+   try (eEmptyLine) <|>
+   try (eDottedLine n) <|>
+   try (eSolidLine n) <|>
+   try (eLine n) )
+
 eLine :: Int -> P ESegment
 eLine n = do
-  notFollowedBy eSectionHeader
-  notFollowedBy (eFrameEnd n)
+  notFollowedBy (try eSectionHeader)
+  notFollowedBy (try (eEmptyFrame n))
+  notFollowedBy (try (eFrameBegin n))
+  notFollowedBy (try (eFrameEnd n))
   skipSpaces n
   content <- many eText
   endOfLine
@@ -62,13 +74,14 @@ eFrame :: Int -> P ESegment
 eFrame n = do
   (n', maybeTitle) <- try (eFrameBegin n)
   let newN = n + n'
-  content <- many1 (eSegment newN) <* eFrameEnd newN
+  content <- many (eFrameContent newN)
+  optional (try (eFrameEnd newN))
   return $ EFrame newN maybeTitle content
 
 eEmptyFrame :: Int -> P ESegment
 eEmptyFrame n = do
   skipSpaces n
-  additionalSpaces <- many space
+  additionalSpaces <- many (string " ")
   string "+==="
   maybeTitle <- optionMaybe (many1 (noneOf "\n\r"))
   endOfLine
@@ -77,7 +90,7 @@ eEmptyFrame n = do
 eFrameBegin :: Int -> P (Int, (Maybe String))
 eFrameBegin n = do
   skipSpaces n
-  additionalSpaces <- many space
+  additionalSpaces <- many (string " ")
   string "+---"
   maybeTitle <- optionMaybe (many1 (noneOf "\n\r"))
   endOfLine
@@ -93,7 +106,7 @@ eDottedLine :: Int -> P ESegment
 eDottedLine n = skipSpaces n *> optional (many1 space) *> string "..." *> endOfLine *> return (EDottedLine n)
 
 skipSpaces :: Int -> P ()
-skipSpaces n = count n space *> return ()
+skipSpaces n = count n (string " ") *> return ()
 
 eText :: P EText
 eText = (
