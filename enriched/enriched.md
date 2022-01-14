@@ -16,5 +16,5 @@ alias s='cat out/$(basename -s .txt $E).svg'
 alias i='inkscape out/$(basename -s .txt $E).svg'
 alias c='rm -rf out; rm -f *.hi *.o enriched2model enriched2latex enriched2svg'
 alias p='rm -rf out; rm -f *.hi *.o'
-alias d='cp enriched2model enriched2latex enriched2svg ~/bin'
+alias d='mv enriched2model enriched2latex enriched2svg ~/bin'
 ```
