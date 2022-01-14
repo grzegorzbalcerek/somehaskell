@@ -36,6 +36,7 @@ eSectionHeader = do
 eSegment :: Int -> P ESegment
 eSegment n =
   (try (eFrame n) <|>
+   try (eEmptyFrame n) <|>
    try (eEmptyLines) <|>
    try (eEmptyLine) <|>
    try (eDottedLine n) <|>
@@ -63,6 +64,15 @@ eFrame n = do
   let newN = n + n'
   content <- many1 (eSegment newN) <* eFrameEnd newN
   return $ EFrame newN maybeTitle content
+
+eEmptyFrame :: Int -> P ESegment
+eEmptyFrame n = do
+  skipSpaces n
+  additionalSpaces <- many space
+  string "+==="
+  maybeTitle <- optionMaybe (many1 (noneOf "\n\r"))
+  endOfLine
+  return $ EFrame (n + length additionalSpaces) maybeTitle []
 
 eFrameBegin :: Int -> P (Int, (Maybe String))
 eFrameBegin n = do
