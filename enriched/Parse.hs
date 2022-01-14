@@ -28,10 +28,10 @@ eSection = do
   segments <- many1 (eSegment)
   return $ ESection visibility title segments
 
-eSectionHeader :: P (Visibility, String)
+eSectionHeader :: P (Visibility, [EText])
 eSectionHeader = do
-  title <- many1 (oneOf "*") *> string " " *> many1 (noneOf "<\n\r") <* endOfLine
-  return $ if "+" `isSuffixOf` title then (Visible, dropWhileEnd (=='+') title) else (Hidden, title)
+  title <- many1 (oneOf "*") *> string " " *> many eText <* endOfLine
+  return $ if "+" `isSuffixOf` (stringifyTexts title) then (Visible, title) else (Hidden, title)
 
 eSegment :: P ESegment
 eSegment =

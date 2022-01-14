@@ -19,7 +19,7 @@ renderSegment EEmptyLines = "EEmptyLines"
 renderSegment EEmptyLine = ""
 renderSegment (EDottedLine n) = replicate n ' ' ++ "..."
 renderSegment (ESolidLine n) = replicate n ' ' ++ "---"
-renderSegment (ESection visibility title segments) = "ESection " ++ show visibility ++ " " ++ title ++ "\n" ++ renderSegments segments
+renderSegment (ESection visibility title segments) = "ESection " ++ show visibility ++ " " ++ renderTexts title ++ "\n" ++ renderSegments segments
 renderSegment (ELine n texts) = replicate n ' ' ++ "ELine " ++ show n ++ ": " ++ renderTexts texts
 renderSegment (EFrame n maybeTitle segments) =
    replicate n ' ' ++ "+--- " ++ show n ++ " " ++ show maybeTitle ++ ":\n" ++ renderSegments segments ++ "\n" ++ replicate n ' ' ++ "+---"

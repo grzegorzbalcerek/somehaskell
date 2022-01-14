@@ -17,7 +17,7 @@ data ESegment =
   ESolidLine Int |
   ELine Int [EText] |
   EFrame Int (Maybe String) [ESegment] |
-  ESection Visibility String [ESegment]
+  ESection Visibility [EText] [ESegment]
   deriving (Eq,Show)
 
 data EText =
@@ -56,3 +56,15 @@ hex SaddleBrown = "8b4513"
 hex Red = "ff0000"
 hex Magenta = "ff00ff"
 hex DarkViolet = "9400d3"
+
+stringifyTexts :: [EText] -> String
+stringifyTexts texts = concat $ map stringifyText texts
+
+stringifyText :: EText -> String
+stringifyText (ELt) = "<"
+stringifyText (EString str) = str
+stringifyText (ENumberSpace str) = str
+stringifyText (EBold texts) = stringifyTexts texts
+stringifyText (EItalic texts) = stringifyTexts texts
+stringifyText (ESmall texts) = stringifyTexts texts
+stringifyText (EColored color texts) = stringifyTexts texts

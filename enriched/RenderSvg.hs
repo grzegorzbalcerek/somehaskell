@@ -124,9 +124,9 @@ renderSegment (x,y) EEmptyLine = ((0,0),"")
 renderSegment (x,y) EEmptyLines = ((0,halfLineSize),"")
 renderSegment _ (ESection visibility title segments) =
     let ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
-        id = title `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
-        g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" title ++ argVisibility visibility ++ ">\n"
-        t = "<text style='font-weight:bold'" ++ argXY (startPosX, startPosY) ++ ">" ++ title ++ "</text>\n"
+        id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
+        g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
+        t = "<text style='font-weight:bold'" ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
         g2 = "</g>\n"
     in ((w,h + lineSize), g1 ++ t ++ o ++ g2)
 renderSegment (x,y) (ELine n texts) =

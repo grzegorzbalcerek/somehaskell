@@ -34,7 +34,7 @@ renderSegment EEmptyLine = ""
 renderSegment (EDottedLine _) = "\\dotfill\n\n"
 renderSegment (ESolidLine _) = "\\hrule\n"
 renderSegment (ESection Hidden title segments) = ""
-renderSegment (ESection Visible title segments) = "\\vfill\\eject\n\n\\textbf{" ++ title ++ "}\n" ++ renderSegments segments
+renderSegment (ESection Visible title segments) = "\\vfill\\eject\n\n\\textbf{" ++ renderTexts title ++ "}\n" ++ renderSegments segments
 renderSegment (ELine n texts) = renderTexts texts ++ "\n"
 renderSegment (EFrame n _ segments) =
  if n == 0
