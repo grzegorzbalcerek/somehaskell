@@ -4,8 +4,6 @@
 
 ```bash
 export E=~/projects/kata/katamarkon.txt
-export E=enriched2.txt
-export E=enriched1.txt
 alias g='ghc enriched2model.hs && ghc enriched2latex.hs && ghc enriched2svg.hs && rm -f *.hi *.o'
 alias r='./enriched2model $E out/$(basename $E) && ./enriched2latex $E out/$(basename -s .txt $E).tex && ./enriched2svg $E out/$(basename -s .txt $E).svg'
 alias m='cat out/$(basename $E)'
