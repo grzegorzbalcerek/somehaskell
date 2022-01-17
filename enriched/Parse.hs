@@ -13,6 +13,9 @@ import Data.Maybe (maybe)
 
 type P = Parsec String ()
 
+frameStarters = "+#"
+frameMarkers = "=-~^"
+
 parseEnrichedInput :: String -> String -> Either ParseError EDoc
 parseEnrichedInput inputPath input = runParser eDoc () inputPath input
 
@@ -35,16 +38,16 @@ eSectionHeader = do
 
 eSegment :: P ESegment
 eSegment =
-  (try (eFrame 0 "-=") <|>
+  (try (eFrame 0 frameStarters frameMarkers) <|>
    try (eEmptyLines) <|>
    try (eEmptyLine) <|>
    try (eDottedLine 0) <|>
    try (eSolidLine 0) <|>
    eLine 0)
 
-eFrameContent :: Int -> String -> P ESegment
-eFrameContent n frameMarker =
-  (try (eFrame (n+1) frameMarker) <|>
+eFrameContent :: Int -> String -> String -> P ESegment
+eFrameContent n starters markers =
+  (try (eFrame (n+1) starters markers) <|>
    try (eEmptyLines) <|>
    try (eEmptyLine) <|>
    try (eDottedLine n) <|>
@@ -54,8 +57,7 @@ eFrameContent n frameMarker =
 eLine :: Int -> P ESegment
 eLine n = do
   notFollowedBy (try eSectionHeader)
-  notFollowedBy (try (eFrameBegin n "=-"))
-  notFollowedBy (try (eFrameEnd n "=-"))
+  notFollowedBy (try (eFrameBegin n frameStarters frameMarkers))
   skipSpaces n
   content <- many (eText ENumberSpace)
   endOfLine
@@ -67,27 +69,23 @@ eEmptyLines = endOfLine >> many1 endOfLine >> return EEmptyLines
 eEmptyLine :: P ESegment
 eEmptyLine = endOfLine >> return EEmptyLine
 
-eFrame :: Int -> String -> P ESegment
-eFrame n possibleFrameMarkers = do
-  (n', frameMarker, title) <- try (eFrameBegin n possibleFrameMarkers)
+eFrame :: Int -> String -> String -> P ESegment
+eFrame n starters markers = do
+  (n', starter, marker, title) <- try (eFrameBegin n starters markers)
   let newN = n + n'
-  content <- many (eFrameContent newN frameMarker)
-  optional (try (eFrameEnd newN frameMarker))
-  return $ EFrame newN frameMarker title content
+  content <- many (eFrameContent newN starter marker)
+  return $ EFrame newN marker title content
 
-eFrameBegin :: Int -> String -> P (Int, String, [EText])
-eFrameBegin n allowedFrameChars = do
+eFrameBegin :: Int -> String -> String -> P (Int, String, String, [EText])
+eFrameBegin n starters markers = do
   skipSpaces n
   additionalSpaces <- many (string " ")
-  string "+"
-  frameChar <- count 1 (oneOf allowedFrameChars)
-  count 2 (string frameChar)
+  starter <- count 1 (oneOf starters)
+  marker <- count 1 (oneOf markers)
+  count 2 (string marker)
   title <- many (eText eStringNumPlusFactory)
   endOfLine
-  return $ (length additionalSpaces, frameChar, title)
-
-eFrameEnd :: Int -> String -> P ()
-eFrameEnd n marker = skipSpaces n *> string "+" *> count 3 (string marker) *> endOfLine *> return ()
+  return $ (length additionalSpaces, starter, marker, title)
 
 eSolidLine :: Int -> P ESegment
 eSolidLine n = skipSpaces n *> optional (many1 (string " ")) *> string "---" *> endOfLine *> return (ESolidLine n)

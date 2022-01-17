@@ -123,12 +123,13 @@ renderSegment :: (Double, Double) -> ESegment -> ((Double, Double), String)
 renderSegment (x,y) EEmptyLine = ((0,0),"")
 renderSegment (x,y) EEmptyLines = ((0,halfLineSize),"")
 renderSegment _ (ESection visibility title segments) =
-    let ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
-        id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
-        g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
-        t = "<text" ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
-        g2 = "</g>\n"
-    in ((w,h + lineSize), g1 ++ t ++ o ++ g2)
+    let ((w0,h0), s0) = maybeRenderSection Nothing (ESection visibility title segments)
+        ((w1,h1), s1) = maybeRenderSection (Just "") (ESection visibility title segments)
+        ((w2,h2), s2) = maybeRenderSection (Just "-") (ESection visibility title segments)
+        ((w3,h3), s3) = maybeRenderSection (Just "=") (ESection visibility title segments)
+        ((w4,h4), s4) = maybeRenderSection (Just "~") (ESection visibility title segments)
+        ((w5,h5), s5) = maybeRenderSection (Just "^") (ESection visibility title segments)
+    in ((maximum [w0,w1,w2,w3,w4,w5],maximum [h0,h1,h2,h3,h4,h5]),s0++s1++s2++s3++s4++s5)
 renderSegment (x,y) (ELine n texts) =
     let o = "<text" ++ argXY (x,y) ++ ">" ++ renderTexts texts ++ "</text>\n"
     in ((fromIntegral (length (stringifyTexts texts)), lineSize), o)
@@ -145,7 +146,25 @@ renderSegment (x,y) (EFrame n marker title segments) =
                 "/>\n"
     in ((ws, ht + hs + lineSize), rect ++ t ++ os)
 
---renderSectionSegments marker (ESection visibility title segments) =
+maybeRenderSection :: Maybe String -> ESegment -> ((Double, Double), String)
+maybeRenderSection maybeMarker s@(ESection visibility title segments) =
+  case (maybeMarker, filter isFrame segments) of
+    (Nothing, []) -> renderSection s
+    (Just marker, (_:_)) ->
+      let filtered = filterFrames marker segments
+      in if (marker == "" || any (hasFrameOf marker) segments) && filtered /= []
+         then renderSection (ESection visibility title filtered)
+         else ((0,0),"")
+    _ -> ((0,0),"")
+
+renderSection :: ESegment -> ((Double, Double), String)
+renderSection (ESection visibility title segments) =
+      let ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
+          id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
+          g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
+          t = "<text" ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
+          g2 = "</g>\n"
+      in ((w,h + lineSize), g1 ++ t ++ o ++ g2)
 
 
 renderMaybeText :: (Double, Double) -> [EText] -> ((Double, Double), String)
