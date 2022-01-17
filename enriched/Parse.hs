@@ -73,7 +73,7 @@ eFrame n possibleFrameMarkers = do
   let newN = n + n'
   content <- many (eFrameContent newN frameMarker)
   optional (try (eFrameEnd newN frameMarker))
-  return $ EFrame newN title content
+  return $ EFrame newN frameMarker title content
 
 eFrameBegin :: Int -> String -> P (Int, String, [EText])
 eFrameBegin n allowedFrameChars = do

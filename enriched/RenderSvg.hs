@@ -136,7 +136,7 @@ renderSegment (x,y) (EDottedLine n) =
   ((0, halfLineSize), renderSeparatorLine dottedLineStyle (x,y) n)
 renderSegment (x,y) (ESolidLine n) =
   ((0, halfLineSize), renderSeparatorLine solidLineStyle (x,y) n)
-renderSegment (x,y) (EFrame n title segments) =
+renderSegment (x,y) (EFrame n marker title segments) =
     let ((_,ht),t) = renderMaybeText (startPosX + fromIntegral n,y + halfLineSize) title
         ((ws,hs),os) = renderSegments (startPosX + fromIntegral n,y + halfLineSize + ht) segments
         rect = "<rect " ++ rectStyle ++
@@ -144,6 +144,9 @@ renderSegment (x,y) (EFrame n title segments) =
                argWidthHeight (fromIntegral 200 - fromIntegral n * 2.0,ht+hs+halfLineSize) ++
                 "/>\n"
     in ((ws, ht + hs + lineSize), rect ++ t ++ os)
+
+--renderSectionSegments marker (ESection visibility title segments) =
+
 
 renderMaybeText :: (Double, Double) -> [EText] -> ((Double, Double), String)
 renderMaybeText _ [] = ((0,0),"")

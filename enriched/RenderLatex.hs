@@ -36,7 +36,7 @@ renderSegment (ESolidLine _) = "\\hrule\n"
 renderSegment (ESection Hidden title segments) = ""
 renderSegment (ESection Visible title segments) = "\\vfill\\eject\n\n\\textbf{" ++ renderTexts title ++ "}\n" ++ renderSegments segments
 renderSegment (ELine n texts) = renderTexts texts ++ "\n"
-renderSegment (EFrame n _ segments) =
+renderSegment (EFrame n marker _ segments) =
  if n == 0
  then "\\fbox{\\parbox{\\linewidth}{\\setlength{\\parskip}{3pt}\n" ++ renderSegments segments ++ "}}"
  else "\\makebox[0.05\\linewidth][l]{}\\fbox{\\parbox{0.92\\linewidth}{\\setlength{\\parskip}{3pt}\n" ++ renderSegments segments ++ "}}"
