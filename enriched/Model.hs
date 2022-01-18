@@ -104,6 +104,36 @@ remodel :: EDoc -> EDoc
 remodel ((EDottedLine n):xs) = (EDottedLine n) : remodel xs
 remodel ((ESolidLine n):xs) = (ESolidLine n) : remodel xs
 remodel ((EFrame n m t s):xs) = (EFrame n m t (remodel s)):remodel xs
-remodel ((ESection v t s):xs) = (ESection v t (remodel s)):remodel xs
+remodel (s@(ESection v t segs):xs) =
+  maybeRemodelSection Nothing s ++
+  maybeRemodelSection (Just "") s ++
+  maybeRemodelSection (Just "-") s ++
+  maybeRemodelSection (Just "=") s ++
+  maybeRemodelSection (Just "~") s ++
+  maybeRemodelSection (Just "^") s ++
+   remodel xs
 remodel (x:xs) = x : remodel xs
 remodel [] = []
+
+
+maybeRemodelSection :: Maybe String -> ESegment -> [ESegment]
+maybeRemodelSection maybeMarker s@(ESection visibility title segments) =
+  case (maybeMarker, filter isFrame segments) of
+    (Nothing, []) -> [s]
+    (Just marker, (_:_)) ->
+      let filtered = filterFrames marker segments
+      in if (marker == "" || any (hasFrameOf marker) segments) && filtered /= []
+         then [ESection visibility (title ++ markerTitleSuffix marker) filtered]
+         else []
+    _ -> []
+
+markerTitleSuffix :: String -> [EText]
+markerTitleSuffix "" = []
+markerTitleSuffix m = [EString (" (" ++ markerColor m ++ ")")]
+
+markerColor :: String -> String
+markerColor "-" = "blue"
+markerColor "=" = "green"
+markerColor "~" = "red"
+markerColor "^" = "orange"
+markerColor _ = "black"

@@ -75,9 +75,9 @@ poczatek = "<?xml version='1.0' encoding='UTF-8' standalone='no'?>\n\
 
 koniec = "</svg>"
 
-dottedLineStyle = "style='fill:none;stroke:#000000;stroke-width:0.25;stroke-opacity:1;stroke-dasharray:0.25,0.5'"
-solidLineStyle = "style='fill:none;stroke:#000000;stroke-width:0.25;stroke-opacity:1'"
-rectStyle = "style='fill:none;stroke:#000000;stroke-width:0.25;stroke-opacity:1'"
+dottedLineStyle = "style='fill:none;stroke:#000000;stroke-width:0.40;stroke-opacity:1;stroke-dasharray:0.25,0.5'"
+solidLineStyle = "style='fill:none;stroke:#000000;stroke-width:0.40;stroke-opacity:1'"
+rectStyle = "style='fill:none;stroke-width:0.40;stroke-opacity:1'"
 
 startPosX = 2.0
 startPosY = 4.0
@@ -123,13 +123,12 @@ renderSegment :: (Double, Double) -> ESegment -> ((Double, Double), String)
 renderSegment (x,y) EEmptyLine = ((0,0),"")
 renderSegment (x,y) EEmptyLines = ((0,halfLineSize),"")
 renderSegment _ (ESection visibility title segments) =
-    let ((w0,h0), s0) = maybeRenderSection Nothing (ESection visibility title segments)
-        ((w1,h1), s1) = maybeRenderSection (Just "") (ESection visibility title segments)
-        ((w2,h2), s2) = maybeRenderSection (Just "-") (ESection visibility title segments)
-        ((w3,h3), s3) = maybeRenderSection (Just "=") (ESection visibility title segments)
-        ((w4,h4), s4) = maybeRenderSection (Just "~") (ESection visibility title segments)
-        ((w5,h5), s5) = maybeRenderSection (Just "^") (ESection visibility title segments)
-    in ((maximum [w0,w1,w2,w3,w4,w5],maximum [h0,h1,h2,h3,h4,h5]),s0++s1++s2++s3++s4++s5)
+      let ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
+          id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
+          g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
+          t = "<text" ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
+          g2 = "</g>\n"
+      in ((0,0), g1 ++ t ++ o ++ g2)
 renderSegment (x,y) (ELine n texts) =
     let o = "<text" ++ argXY (x,y) ++ ">" ++ renderTexts texts ++ "</text>\n"
     in ((fromIntegral (length (stringifyTexts texts)), lineSize), o)
@@ -140,32 +139,11 @@ renderSegment (x,y) (ESolidLine n) =
 renderSegment (x,y) (EFrame n marker title segments) =
     let ((_,ht),t) = renderMaybeText (startPosX + fromIntegral n,y + halfLineSize) title
         ((ws,hs),os) = renderSegments (startPosX + fromIntegral n,y + halfLineSize + ht) segments
-        rect = "<rect " ++ rectStyle ++
+        rect = "<rect " ++ rectStyle ++ arg "stroke" (markerColor marker) ++
                argXY (startPosX + fromIntegral n - 0.5,y - halfLineSize) ++
                argWidthHeight (fromIntegral 200 - fromIntegral n * 2.0,ht+hs+halfLineSize) ++
                 "/>\n"
     in ((ws, ht + hs + lineSize), rect ++ t ++ os)
-
-maybeRenderSection :: Maybe String -> ESegment -> ((Double, Double), String)
-maybeRenderSection maybeMarker s@(ESection visibility title segments) =
-  case (maybeMarker, filter isFrame segments) of
-    (Nothing, []) -> renderSection s
-    (Just marker, (_:_)) ->
-      let filtered = filterFrames marker segments
-      in if (marker == "" || any (hasFrameOf marker) segments) && filtered /= []
-         then renderSection (ESection visibility title filtered)
-         else ((0,0),"")
-    _ -> ((0,0),"")
-
-renderSection :: ESegment -> ((Double, Double), String)
-renderSection (ESection visibility title segments) =
-      let ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
-          id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
-          g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
-          t = "<text" ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
-          g2 = "</g>\n"
-      in ((w,h + lineSize), g1 ++ t ++ o ++ g2)
-
 
 renderMaybeText :: (Double, Double) -> [EText] -> ((Double, Double), String)
 renderMaybeText _ [] = ((0,0),"")
