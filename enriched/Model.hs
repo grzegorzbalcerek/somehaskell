@@ -99,3 +99,11 @@ onlyFrames ((EFrame n m t s):xs) =
      else (EFrame n m t filtered):(onlyFrames xs)
 onlyFrames (_:xs) = onlyFrames xs
 onlyFrames [] = []
+
+remodel :: EDoc -> EDoc
+remodel ((EDottedLine n):xs) = (EDottedLine n) : remodel xs
+remodel ((ESolidLine n):xs) = (ESolidLine n) : remodel xs
+remodel ((EFrame n m t s):xs) = (EFrame n m t (remodel s)):remodel xs
+remodel ((ESection v t s):xs) = (ESection v t (remodel s)):remodel xs
+remodel (x:xs) = x : remodel xs
+remodel [] = []

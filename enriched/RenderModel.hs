@@ -15,7 +15,7 @@ renderSegments :: [ESegment] -> String
 renderSegments eSegments = concat $ "\n" `intersperse` (filter (/="") (map renderSegment eSegments))
 
 renderSegment :: ESegment -> String
-renderSegment EEmptyLines = "EEmptyLines"
+renderSegment EEmptyLines = " "
 renderSegment EEmptyLine = ""
 renderSegment (EDottedLine n) = replicate n ' ' ++ "..."
 renderSegment (ESolidLine n) = replicate n ' ' ++ "---"
@@ -29,8 +29,8 @@ renderTexts texts = concat $ " " `intersperse` map renderText texts
 
 renderText :: EText -> String
 renderText (ELt) = "&lt;"
-renderText (EString str) = show str
-renderText (ENumberSpace str) = show str
+renderText (EString str) = str
+renderText (ENumberSpace str) = str
 renderText (EBold texts) = "bold(" ++ renderTexts texts ++ ")"
 renderText (EItalic texts) = "italic(" ++ renderTexts texts ++ ")"
 renderText (ESmall texts) = "small(" ++ renderTexts texts ++ ")"
