@@ -104,13 +104,15 @@ remodel :: EDoc -> EDoc
 remodel ((EDottedLine n):xs) = (EDottedLine n) : remodel xs
 remodel ((ESolidLine n):xs) = (ESolidLine n) : remodel xs
 remodel ((EFrame n m t s):xs) = (EFrame n m t (remodel s)):remodel xs
-remodel (s@(ESection v t segs):xs) =
+remodel (s@(ESection _ _ _):xs) =
   maybeRemodelSection Nothing s ++
   maybeRemodelSection (Just "") s ++
   maybeRemodelSection (Just "-") s ++
   maybeRemodelSection (Just "=") s ++
   maybeRemodelSection (Just "~") s ++
   maybeRemodelSection (Just "^") s ++
+  maybeRemodelSection (Just ",") s ++
+  maybeRemodelSection (Just "`") s ++
    remodel xs
 remodel (x:xs) = x : remodel xs
 remodel [] = []
@@ -136,4 +138,6 @@ markerColor "-" = "blue"
 markerColor "=" = "green"
 markerColor "~" = "red"
 markerColor "^" = "orange"
+markerColor "," = "magenta"
+markerColor "`" = "cyan"
 markerColor _ = "black"
