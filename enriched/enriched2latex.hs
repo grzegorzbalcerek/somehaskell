@@ -3,4 +3,4 @@ module Main where
 import MainLogic
 import RenderLatex
 
-main = mainLogic renderLatex
+main = mainLogic renderLatex ".tex"

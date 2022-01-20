@@ -13,8 +13,8 @@ poczatek = "<?xml version='1.0' encoding='UTF-8' standalone='no'?>\n\
 \<svg\n\
 \   xml:space='preserve'\n\
 \   width='210mm'\n\
-\   height='297mm'\n\
-\   viewBox='0 0 210 297'\n\
+\   height='400mm'\n\
+\   viewBox='0 0 210 400'\n\
 \   version='1.1'\n\
 \   id='svg1'\n\
 \   inkscape:version='1.1.1 (eb90963e84, 2021-10-02)'\n\
@@ -93,6 +93,9 @@ arg label value = " " ++ label ++ "='" ++ value ++ "'"
 argD :: String -> Double -> String
 argD label value = arg label (show value)
 
+argExp :: String -> String
+argExp file = arg "inkscape:export-filename" file
+
 argPair :: String -> String -> (Double, Double) -> String
 argPair labelX labelY (x,y) = argD labelX x ++ argD labelY y
 
@@ -119,14 +122,18 @@ renderSegments (x,y) (s:segments) =
     in ((w `max` ws,h + hs), o ++ os)
 renderSegments _ [] = ((0,0),"")
 
+expFilter title = filter (`elem` ['a'..'z']++['A'..'Z']++['0'..'9']) title
+
 renderSegment :: (Double, Double) -> ESegment -> ((Double, Double), String)
 renderSegment (x,y) EEmptyLine = ((0,0),"")
 renderSegment (x,y) EEmptyLines = ((0,halfLineSize),"")
 renderSegment _ (ESection visibility title segments) =
-      let ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
+      let expFile = expFilter (stringifyTexts title) ++ ".png"
+          expArg = argExp expFile
+          ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
           id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
           g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
-          t = "<text" ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
+          t = "<text" ++ expArg ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
           g2 = "</g>\n"
       in ((0,0), g1 ++ t ++ o ++ g2)
 renderSegment (x,y) (ELine n texts) =
