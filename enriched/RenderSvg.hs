@@ -84,8 +84,8 @@ startPosY = 4.0
 lineSize = 4.0
 halfLineSize = lineSize / 2.0
 
-renderSvg :: EDoc -> String
-renderSvg segments = unlines [poczatek, snd (renderSegments (startPosX, startPosY) segments), koniec]
+renderSvg :: String -> EDoc -> String
+renderSvg p segments = unlines [poczatek, snd (renderSegments p (startPosX, startPosY) segments), koniec]
 
 arg :: String -> String -> String
 arg label value = " " ++ label ++ "='" ++ value ++ "'"
@@ -115,37 +115,37 @@ argVisibility :: Visibility -> String
 argVisibility Visible = ""
 argVisibility Hidden = arg "style" "display:none"
 
-renderSegments :: (Double, Double) -> [ESegment] -> ((Double, Double), String)
-renderSegments (x,y) (s:segments) =
-    let ((w,h),o) = renderSegment (x,y) s
-        ((ws,hs),os) = renderSegments (x,y+h) segments
+renderSegments :: String -> (Double, Double) -> [ESegment] -> ((Double, Double), String)
+renderSegments p (x,y) (s:segments) =
+    let ((w,h),o) = renderSegment p (x,y) s
+        ((ws,hs),os) = renderSegments p (x,y+h) segments
     in ((w `max` ws,h + hs), o ++ os)
-renderSegments _ [] = ((0,0),"")
+renderSegments _ _ [] = ((0,0),"")
 
 expFilter title = filter (`elem` ['a'..'z']++['A'..'Z']++['0'..'9']) title
 
-renderSegment :: (Double, Double) -> ESegment -> ((Double, Double), String)
-renderSegment (x,y) EEmptyLine = ((0,0),"")
-renderSegment (x,y) EEmptyLines = ((0,halfLineSize),"")
-renderSegment _ (ESection visibility title segments) =
-      let expFile = expFilter (stringifyTexts title) ++ ".png"
+renderSegment :: String -> (Double, Double) -> ESegment -> ((Double, Double), String)
+renderSegment _ (x,y) EEmptyLine = ((0,0),"")
+renderSegment _ (x,y) EEmptyLines = ((0,halfLineSize),"")
+renderSegment p _ (ESection visibility title segments) =
+      let expFile = p ++ expFilter (stringifyTexts title) ++ ".png"
           expArg = argExp expFile
-          ((w,h),o) = renderSegments (startPosX, startPosY + lineSize) segments
+          ((w,h),o) = renderSegments p (startPosX, startPosY + lineSize) segments
           id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
           g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
           t = "<text" ++ expArg ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
           g2 = "</g>\n"
       in ((0,0), g1 ++ t ++ o ++ g2)
-renderSegment (x,y) (ELine n texts) =
+renderSegment _ (x,y) (ELine n texts) =
     let o = "<text" ++ argXY (x,y) ++ ">" ++ renderTexts texts ++ "</text>\n"
     in ((fromIntegral (length (stringifyTexts texts)), lineSize), o)
-renderSegment (x,y) (EDottedLine n) =
+renderSegment _ (x,y) (EDottedLine n) =
   ((0, halfLineSize), renderSeparatorLine dottedLineStyle (x,y) n)
-renderSegment (x,y) (ESolidLine n) =
+renderSegment _ (x,y) (ESolidLine n) =
   ((0, halfLineSize), renderSeparatorLine solidLineStyle (x,y) n)
-renderSegment (x,y) (EFrame n marker title segments) =
+renderSegment p (x,y) (EFrame n marker title segments) =
     let ((_,ht),t) = renderMaybeText (startPosX + fromIntegral n,y + halfLineSize) title
-        ((ws,hs),os) = renderSegments (startPosX + fromIntegral n,y + halfLineSize + ht) segments
+        ((ws,hs),os) = renderSegments p (startPosX + fromIntegral n,y + halfLineSize + ht) segments
         rect = "<rect " ++ rectStyle ++ arg "stroke" (markerColor marker) ++
                argXY (startPosX + fromIntegral n - 0.5,y - halfLineSize) ++
                argWidthHeight (fromIntegral 200 - fromIntegral n * 2.0,ht+hs+halfLineSize) ++

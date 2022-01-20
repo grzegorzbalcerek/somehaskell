@@ -8,8 +8,8 @@ import Data.Char
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe,maybe)
 
-renderModel :: EDoc -> String
-renderModel eDoc = renderSegments eDoc
+renderModel :: String -> EDoc -> String
+renderModel _ eDoc = renderSegments eDoc
 
 renderSegments :: [ESegment] -> String
 renderSegments eSegments = concat $ "\n" `intersperse` (filter (/="") (map renderSegment eSegments))

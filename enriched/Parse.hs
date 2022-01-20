@@ -14,7 +14,7 @@ import Data.Maybe (maybe)
 type P = Parsec String ()
 
 frameStarters = "+#"
-frameMarkers = "=-~^,`"
+frameMarkers = "-~=*^`"
 
 parseEnrichedInput :: String -> String -> Either ParseError EDoc
 parseEnrichedInput inputPath input = runParser eDoc () inputPath input

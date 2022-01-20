@@ -119,11 +119,11 @@ remodel (s@(ESection _ _ _):xs) =
   maybeRemodelSection Nothing s ++
   maybeRemodelSection (Just "") s ++
   maybeRemodelSection (Just "-") s ++
-  maybeRemodelSection (Just "=") s ++
   maybeRemodelSection (Just "~") s ++
-  maybeRemodelSection (Just "^") s ++
-  maybeRemodelSection (Just ",") s ++
+  maybeRemodelSection (Just "=") s ++
+  maybeRemodelSection (Just "*") s ++
   maybeRemodelSection (Just "`") s ++
+  maybeRemodelSection (Just "^") s ++
    remodel xs
 remodel (x:xs) = x : remodel xs
 remodel [] = []
@@ -147,8 +147,7 @@ markerTitleSuffix m = [EString (" (" ++ markerColor m ++ ")")]
 markerColor :: String -> String
 markerColor "-" = "blue"
 markerColor "=" = "green"
-markerColor "~" = "red"
-markerColor "^" = "orange"
-markerColor "," = "magenta"
-markerColor "`" = "cyan"
+markerColor "*" = "magenta"
+markerColor "`" = "orange"
+markerColor "^" = "red"
 markerColor _ = "black"

@@ -22,8 +22,8 @@ poczatek = "\\documentclass[10pt,notitlepage,oneside,a4paper]{article}\n\
 
 koniec = "\\end{document}"
 
-renderLatex :: EDoc -> String
-renderLatex segments = unlines [poczatek, renderSegments segments, koniec]
+renderLatex :: String -> EDoc -> String
+renderLatex _ segments = unlines [poczatek, renderSegments segments, koniec]
 
 renderSegments :: [ESegment] -> String
 renderSegments segments = unlines (map renderSegment segments)
