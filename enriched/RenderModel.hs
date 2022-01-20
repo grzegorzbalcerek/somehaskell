@@ -33,5 +33,6 @@ renderText (EString str) = str
 renderText (ENumberSpace str) = str
 renderText (EBold texts) = "bold(" ++ renderTexts texts ++ ")"
 renderText (EItalic texts) = "italic(" ++ renderTexts texts ++ ")"
+renderText (EUnderline texts) = "underline(" ++ renderTexts texts ++ ")"
 renderText (ESmall texts) = "small(" ++ renderTexts texts ++ ")"
 renderText (EColored color texts) = show color ++ "(" ++ renderTexts texts ++ ")"

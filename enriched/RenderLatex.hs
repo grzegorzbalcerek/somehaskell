@@ -50,6 +50,7 @@ renderText (EString str) = str
 renderText (ENumberSpace str) = "\\textsuperscript{" ++ str ++ "}"
 renderText (EBold texts) = "\\textbf{" ++ renderTexts texts ++ "}"
 renderText (EItalic texts) = "\\textit{" ++ renderTexts texts ++ "}"
+renderText (EUnderline texts) = "\\underline{" ++ renderTexts texts ++ "}"
 renderText (EColored color texts) = "\\textcolor[HTML]{" ++ hex color ++ "}{" ++ renderTexts texts ++ "}"
 renderText (ESmall texts) = ""
 

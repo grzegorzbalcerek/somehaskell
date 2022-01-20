@@ -101,6 +101,7 @@ eText numPlusFactory = (
     eLt <|>
     (eBold numPlusFactory) <|>
     (eItalic numPlusFactory) <|>
+    (eUnderline numPlusFactory) <|>
     (eSmall numPlusFactory) <|>
     try (eColored numPlusFactory) <|>
     try (eNumPlus numPlusFactory) <|>
@@ -111,6 +112,9 @@ eBold numPlusFactory = EBold <$> try (string "<bold>" *> many1 (eText numPlusFac
 
 eItalic :: (String -> EText) -> P EText
 eItalic numPlusFactory = EItalic <$> try (string "<italic>" *> many1 (eText numPlusFactory) <* string "</italic>")
+
+eUnderline :: (String -> EText) -> P EText
+eUnderline numPlusFactory = EUnderline <$> try (string "<underline>" *> many1 (eText numPlusFactory) <* string "</underline>")
 
 eSmall :: (String -> EText) -> P EText
 eSmall numPlusFactory = ESmall <$> try (string "<x-display><param>" *>
@@ -123,12 +127,17 @@ eColor :: P EColor
 eColor = string "<param>" *> (
   try (string "blue" >> return Blue) <|>
   try (string "dodger blue" >> return DodgerBlue) <|>
+  try (string "cadet blue" >> return CadetBlue) <|>
   try (string "cyan" >> return Cyan) <|>
   try (string "forest green" >> return ForestGreen) <|>
   try (string "green" >> return Green) <|>
+  try (string "yellow green" >> return YellowGreen) <|>
   try (string "yellow" >> return Yellow) <|>
-  try (string "dark orange" >> return DarkOrange) <|>
+  try (string "dark khaki" >> return DarkKhaki) <|>
+  try (string "orange" >> return Orange) <|>
+  try (string "tomato" >> return Tomato) <|>
   try (string "saddle brown" >> return SaddleBrown) <|>
+  try (string "firebrick" >> return Firebrick) <|>
   try (string "red" >> return Red) <|>
   try (string "magenta" >> return Magenta) <|>
   try (string "dark violet" >> return DarkViolet)

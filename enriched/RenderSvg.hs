@@ -164,5 +164,6 @@ renderText (EString str) = str
 renderText (ENumberSpace str) = "<tspan style='font-size:75%;baseline-shift:super'>" ++ str ++ "</tspan>"
 renderText (EBold texts) = "<tspan style='font-weight:bold'>" ++ renderTexts texts ++ "</tspan>"
 renderText (EItalic texts) = "<tspan style='font-style:italic'>" ++ renderTexts texts ++ "</tspan>"
+renderText (EUnderline texts) = "<tspan style='text-decoration:underline'>" ++ renderTexts texts ++ "</tspan>"
 renderText (EColored color texts) = "<tspan style='fill:#" ++ hex color ++ "'>" ++ renderTexts texts ++ "</tspan>"
 renderText (ESmall texts) = ""

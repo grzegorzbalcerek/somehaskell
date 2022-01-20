@@ -26,6 +26,7 @@ data EText =
   ENumberSpace String |
   EBold [EText] |
   EItalic [EText] |
+  EUnderline [EText] |
   ESmall [EText] |
   EColored EColor [EText]
   deriving (Eq,Show)
@@ -33,12 +34,17 @@ data EText =
 data EColor =
   Blue |
   DodgerBlue |
+  CadetBlue |
   Cyan |
   ForestGreen |
   Green |
+  YellowGreen |
   Yellow |
-  DarkOrange |
+  DarkKhaki |
+  Orange |
+  Tomato |
   SaddleBrown |
+  Firebrick |
   Red |
   Magenta |
   DarkViolet
@@ -47,12 +53,17 @@ data EColor =
 hex :: EColor -> String
 hex Blue = "0000ff"
 hex DodgerBlue = "1e90ff"
+hex CadetBlue = "5f9ea0"
 hex Cyan = "00ffff"
 hex ForestGreen = "228b22"
 hex Green = "00ff00"
+hex YellowGreen = "9acd32"
 hex Yellow = "ffff00"
-hex DarkOrange = "ff8c00"
+hex DarkKhaki = "bdb76b"
+hex Orange = "ffa500"
+hex Tomato = "ff6347"
 hex SaddleBrown = "8b4513"
+hex Firebrick = "b22222"
 hex Red = "ff0000"
 hex Magenta = "ff00ff"
 hex DarkViolet = "9400d3"
