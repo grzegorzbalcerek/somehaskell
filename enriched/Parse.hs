@@ -6,6 +6,7 @@ import Control.Applicative ((<$>))
 import Model
 import Data.String (words)
 import Data.Char
+import Data.Maybe
 import Control.Monad
 import qualified Data.Map as Map
 import Debug.Trace
@@ -38,16 +39,16 @@ eSectionHeader = do
 
 eSegment :: P ESegment
 eSegment =
-  (try (eFrame 0 frameStarters frameMarkers) <|>
+  (try (eFrame 0 frameStarters frameMarkers Black) <|>
    try (eEmptyLines) <|>
    try (eEmptyLine) <|>
    try (eDottedLine 0) <|>
    try (eSolidLine 0) <|>
    eLine 0)
 
-eFrameContent :: Int -> String -> String -> P ESegment
-eFrameContent n starters markers =
-  (try (eFrame (n+1) starters markers) <|>
+eFrameContent :: Int -> String -> String -> EColor -> P ESegment
+eFrameContent n starters markers defaultColor =
+  (try (eFrame (n+1) starters markers defaultColor) <|>
    try (eEmptyLines) <|>
    try (eEmptyLine) <|>
    try (eDottedLine n) <|>
@@ -57,7 +58,7 @@ eFrameContent n starters markers =
 eLine :: Int -> P ESegment
 eLine n = do
   notFollowedBy (try eSectionHeader)
-  notFollowedBy (try (eFrameBegin n frameStarters frameMarkers))
+  notFollowedBy (try (eFrameBegin n frameStarters frameMarkers Black))
   skipSpaces n
   content <- many (eText ENumberSpace)
   endOfLine
@@ -69,23 +70,27 @@ eEmptyLines = endOfLine >> many1 endOfLine >> return EEmptyLines
 eEmptyLine :: P ESegment
 eEmptyLine = endOfLine >> return EEmptyLine
 
-eFrame :: Int -> String -> String -> P ESegment
-eFrame n starters markers = do
-  (n', starter, marker, title) <- try (eFrameBegin n starters markers)
+eFrame :: Int -> String -> String -> EColor -> P ESegment
+eFrame n starters markers defaultColor = do
+  (n', starter, marker, frameColor, title) <- try (eFrameBegin n starters markers defaultColor)
   let newN = n + n'
-  content <- many (eFrameContent newN starter marker)
-  return $ EFrame newN marker title content
+  content <- many (eFrameContent newN starter marker frameColor)
+  return $ EFrame newN marker frameColor title content
 
-eFrameBegin :: Int -> String -> String -> P (Int, String, String, [EText])
-eFrameBegin n starters markers = do
+eFrameBegin :: Int -> String -> String -> EColor -> P (Int, String, String, EColor, [EText])
+eFrameBegin n starters markers defaultColor = do
   skipSpaces n
   additionalSpaces <- many (string " ")
   starter <- count 1 (oneOf starters)
-  marker <- count 1 (oneOf markers)
-  count 2 (string marker)
+  maybeNumber <- optionMaybe (count 1 (oneOf "0123456789"))
+  let allowedMarkers = maybe markers (\n -> if n == markers then "-" else markers) maybeNumber
+  marker' <- count 1 (oneOf allowedMarkers)
+  count 2 (string marker')
+  let marker = fromMaybe marker' maybeNumber
   title <- many (eText eStringNumPlusFactory)
   endOfLine
-  return $ (length additionalSpaces, starter, marker, title)
+  let frameColor = if title == [] then defaultColor else findColor title
+  return $ (length additionalSpaces, starter, marker, frameColor, title)
 
 eSolidLine :: Int -> P ESegment
 eSolidLine n = skipSpaces n *> optional (many1 (string " ")) *> string "---" *> endOfLine *> return (ESolidLine n)

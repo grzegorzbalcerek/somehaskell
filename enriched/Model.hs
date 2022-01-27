@@ -16,7 +16,7 @@ data ESegment =
   EDottedLine Int |
   ESolidLine Int |
   ELine Int [EText] |
-  EFrame Int String [EText] [ESegment] |
+  EFrame Int String EColor [EText] [ESegment] |
   ESection Visibility [EText] [ESegment]
   deriving (Eq,Show)
 
@@ -32,6 +32,7 @@ data EText =
   deriving (Eq,Show)
 
 data EColor =
+  Black |
   Blue |
   DodgerBlue |
   CadetBlue |
@@ -51,6 +52,7 @@ data EColor =
   deriving (Eq,Show)
 
 hex :: EColor -> String
+hex Black = "000000"
 hex Blue = "0000ff"
 hex DodgerBlue = "1e90ff"
 hex CadetBlue = "5f9ea0"
@@ -68,13 +70,16 @@ hex Red = "ff0000"
 hex Magenta = "ff00ff"
 hex DarkViolet = "9400d3"
 
+colorName :: EColor -> String
+colorName c = show c
+
 isFrame :: ESegment -> Bool
-isFrame (EFrame _ _ _ _) = True
+isFrame (EFrame _ _ _ _ _) = True
 isFrame _ = False
 
 hasFrameOf :: String -> ESegment -> Bool
-hasFrameOf marker (EFrame _ m _ _) | marker == m = True
-hasFrameOf marker (EFrame _ _ _ xs) = or $ map (hasFrameOf marker) xs
+hasFrameOf marker (EFrame _ m _ _ _) | marker == m = True
+hasFrameOf marker (EFrame _ _ _ _ xs) = or $ map (hasFrameOf marker) xs
 hasFrameOf _ _ = False
 
 stringifyTexts :: [EText] -> String
@@ -91,43 +96,52 @@ stringifyText (EColored color texts) = stringifyTexts texts
 
 filterFrames :: String -> [ESegment] -> [ESegment]
 filterFrames marker [] = []
-filterFrames marker ((EFrame n m title segments):xs) | marker == m =
-  ((EFrame n m title (filterFrames marker segments)): filterFrames marker xs)
-filterFrames marker ((EFrame n m title segments):xs) | marker /= m =
+filterFrames marker ((EFrame n m color title segments):xs) | marker == m =
+  ((EFrame n m color title (filterFrames marker segments)): filterFrames marker xs)
+filterFrames marker ((EFrame n m color title segments):xs) | marker /= m =
   let filtered = onlyFrames segments
   in if title == [] && filtered == []
      then filterFrames marker xs
-     else ((EFrame n m (title++[EString "…"]) (onlyFrames segments)): filterFrames marker xs)
+     else ((EFrame n m color (title++[EString "…"]) (onlyFrames segments)): filterFrames marker xs)
 filterFrames marker (EEmptyLine:xs) = filterFrames marker xs
 filterFrames marker (EEmptyLines:xs) = filterFrames marker xs
 filterFrames marker (x:xs) = x:filterFrames marker xs
 
 onlyFrames :: [ESegment] -> [ESegment]
-onlyFrames ((EFrame n m t s):xs) =
+onlyFrames ((EFrame n m c t s):xs) =
   let filtered = onlyFrames s
   in if filtered == []
      then (onlyFrames xs)
-     else (EFrame n m t filtered):(onlyFrames xs)
+     else (EFrame n m c t filtered):(onlyFrames xs)
 onlyFrames (_:xs) = onlyFrames xs
 onlyFrames [] = []
 
 remodel :: EDoc -> EDoc
 remodel ((EDottedLine n):xs) = (EDottedLine n) : remodel xs
 remodel ((ESolidLine n):xs) = (ESolidLine n) : remodel xs
-remodel ((EFrame n m t s):xs) = (EFrame n m t (remodel s)):remodel xs
+remodel ((EFrame n m c t s):xs) = (EFrame n m c t (remodel s)):remodel xs
 remodel (s@(ESection _ _ _):xs) =
   maybeRemodelSection Nothing s ++
   maybeRemodelSection (Just "") s ++
+  maybeRemodelSection (Just "0") s ++
+  maybeRemodelSection (Just "1") s ++
+  maybeRemodelSection (Just "2") s ++
+  maybeRemodelSection (Just "3") s ++
+  maybeRemodelSection (Just "4") s ++
+  maybeRemodelSection (Just "5") s ++
+  maybeRemodelSection (Just "6") s ++
+  maybeRemodelSection (Just "7") s ++
+  maybeRemodelSection (Just "8") s ++
+  maybeRemodelSection (Just "9") s ++
   maybeRemodelSection (Just "-") s ++
   maybeRemodelSection (Just "~") s ++
   maybeRemodelSection (Just "=") s ++
   maybeRemodelSection (Just "*") s ++
   maybeRemodelSection (Just "`") s ++
   maybeRemodelSection (Just "^") s ++
-   remodel xs
+  remodel xs
 remodel (x:xs) = x : remodel xs
 remodel [] = []
-
 
 maybeRemodelSection :: Maybe String -> ESegment -> [ESegment]
 maybeRemodelSection maybeMarker s@(ESection visibility title segments) =
@@ -141,13 +155,25 @@ maybeRemodelSection maybeMarker s@(ESection visibility title segments) =
     _ -> []
 
 markerTitleSuffix :: String -> [EText]
-markerTitleSuffix "" = []
-markerTitleSuffix m = [EString (" (" ++ markerColor m ++ ")")]
+markerTitleSuffix (digit:[])
+   | digit `elem` "0123456789" = [EString (" (" ++ (digit:[]) ++ ")")]
+   | otherwise = [EString (" (" ++ markerColor (digit:[]) ++ ")")]
+markerTitleSuffix _ = []
 
 markerColor :: String -> String
 markerColor "-" = "blue"
+markerColor "~" = "cyan"
 markerColor "=" = "green"
 markerColor "*" = "magenta"
 markerColor "`" = "orange"
 markerColor "^" = "red"
 markerColor _ = "black"
+
+findColor :: [EText] -> EColor
+findColor ((EColored c t):_) = c
+findColor ((EBold t):xt) = findColor (t++xt)
+findColor ((EItalic t):xt) = findColor (t++xt)
+findColor ((EUnderline t):xt) = findColor (t++xt)
+findColor ((ESmall t):xt) = findColor (t++xt)
+findColor (_:xt) = findColor xt
+findColor [] = Black
