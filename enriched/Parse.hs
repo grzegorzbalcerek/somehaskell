@@ -46,6 +46,25 @@ eSegment =
    try (eSolidLine 0) <|>
    eLine 0)
 
+eFrame :: Int -> String -> String -> EColor -> P ESegment
+eFrame n starters markers defaultColor = do
+  (n', starter, marker, frameColor, title) <- try (eFrameBegin n starters markers defaultColor)
+  let newN = n + n'
+  content <- many (eFrameContent newN starter marker frameColor)
+  return $ EFrame newN frameColor title content
+
+eFrameBegin :: Int -> String -> String -> EColor -> P (Int, String, String, EColor, [EText])
+eFrameBegin n starters markers defaultColor = do
+  skipSpaces n
+  additionalSpaces <- many (string " ")
+  starter <- count 1 (oneOf starters)
+  marker <- count 1 (oneOf markers)
+  count 2 (string marker)
+  title <- many (eText eStringNumPlusFactory)
+  let frameColor = if title == [] then defaultColor else findColor title
+--  if title /= [] && n > 0 && frameColor /= defaultColor then unexpected "color not matched" else endOfLine
+  return $ (length additionalSpaces, starter, marker, frameColor, title)
+
 eFrameContent :: Int -> String -> String -> EColor -> P ESegment
 eFrameContent n starters markers defaultColor =
   (try (eFrame (n+1) starters markers defaultColor) <|>
@@ -69,28 +88,6 @@ eEmptyLines = endOfLine >> many1 endOfLine >> return EEmptyLines
 
 eEmptyLine :: P ESegment
 eEmptyLine = endOfLine >> return EEmptyLine
-
-eFrame :: Int -> String -> String -> EColor -> P ESegment
-eFrame n starters markers defaultColor = do
-  (n', starter, marker, frameColor, title) <- try (eFrameBegin n starters markers defaultColor)
-  let newN = n + n'
-  content <- many (eFrameContent newN starter marker frameColor)
-  return $ EFrame newN marker frameColor title content
-
-eFrameBegin :: Int -> String -> String -> EColor -> P (Int, String, String, EColor, [EText])
-eFrameBegin n starters markers defaultColor = do
-  skipSpaces n
-  additionalSpaces <- many (string " ")
-  starter <- count 1 (oneOf starters)
-  maybeNumber <- optionMaybe (count 1 (oneOf "0123456789"))
-  let allowedMarkers = maybe markers (\n -> if n == markers then "-" else markers) maybeNumber
-  marker' <- count 1 (oneOf allowedMarkers)
-  count 2 (string marker')
-  let marker = fromMaybe marker' maybeNumber
-  title <- many (eText eStringNumPlusFactory)
-  endOfLine
-  let frameColor = if title == [] then defaultColor else findColor title
-  return $ (length additionalSpaces, starter, marker, frameColor, title)
 
 eSolidLine :: Int -> P ESegment
 eSolidLine n = skipSpaces n *> optional (many1 (string " ")) *> string "---" *> endOfLine *> return (ESolidLine n)

@@ -143,7 +143,7 @@ renderSegment _ (x,y) (EDottedLine n) =
   ((0, halfLineSize), renderSeparatorLine dottedLineStyle (x,y) n)
 renderSegment _ (x,y) (ESolidLine n) =
   ((0, halfLineSize), renderSeparatorLine solidLineStyle (x,y) n)
-renderSegment p (x,y) (EFrame n marker color title segments) =
+renderSegment p (x,y) (EFrame n color title segments) =
     let ((_,ht),t) = renderMaybeText (startPosX + fromIntegral n,y + halfLineSize) title
         ((ws,hs),os) = renderSegments p (startPosX + fromIntegral n,y + halfLineSize + ht) segments
         rect = "<rect " ++ rectStyle ++ arg "stroke" ('#':(hex color)) ++

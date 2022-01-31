@@ -16,7 +16,7 @@ data ESegment =
   EDottedLine Int |
   ESolidLine Int |
   ELine Int [EText] |
-  EFrame Int String EColor [EText] [ESegment] |
+  EFrame Int EColor [EText] [ESegment] |
   ESection Visibility [EText] [ESegment]
   deriving (Eq,Show)
 
@@ -74,12 +74,12 @@ colorName :: EColor -> String
 colorName c = show c
 
 isFrame :: ESegment -> Bool
-isFrame (EFrame _ _ _ _ _) = True
+isFrame (EFrame _ _ _ _) = True
 isFrame _ = False
 
-hasFrameOf :: String -> ESegment -> Bool
-hasFrameOf marker (EFrame _ m _ _ _) | marker == m = True
-hasFrameOf marker (EFrame _ _ _ _ xs) = or $ map (hasFrameOf marker) xs
+hasFrameOf :: EColor -> ESegment -> Bool
+hasFrameOf color (EFrame _ c _ _) | color == c = True
+hasFrameOf color (EFrame _ _ _ xs) = or $ map (hasFrameOf color) xs
 hasFrameOf _ _ = False
 
 stringifyTexts :: [EText] -> String
@@ -94,80 +94,68 @@ stringifyText (EItalic texts) = stringifyTexts texts
 stringifyText (ESmall texts) = stringifyTexts texts
 stringifyText (EColored color texts) = stringifyTexts texts
 
-filterFrames :: String -> [ESegment] -> [ESegment]
-filterFrames marker [] = []
-filterFrames marker ((EFrame n m color title segments):xs) | marker == m =
-  ((EFrame n m color title (filterFrames marker segments)): filterFrames marker xs)
-filterFrames marker ((EFrame n m color title segments):xs) | marker /= m =
+filterFrames :: EColor -> [ESegment] -> [ESegment]
+filterFrames color [] = []
+filterFrames color ((EFrame n c title segments):xs) | color == c =
+  ((EFrame n c title (filterFrames color segments)): filterFrames color xs)
+filterFrames color ((EFrame n c title segments):xs) | color /= c =
   let filtered = onlyFrames segments
   in if title == [] && filtered == []
-     then filterFrames marker xs
-     else ((EFrame n m color (title++[EString "…"]) (onlyFrames segments)): filterFrames marker xs)
-filterFrames marker (EEmptyLine:xs) = filterFrames marker xs
-filterFrames marker (EEmptyLines:xs) = filterFrames marker xs
-filterFrames marker (x:xs) = x:filterFrames marker xs
+     then filterFrames color xs
+     else ((EFrame n c (title++[EString "…"]) (onlyFrames segments)): filterFrames color xs)
+filterFrames color (EEmptyLine:xs) = filterFrames color xs
+filterFrames color (EEmptyLines:xs) = filterFrames color xs
+filterFrames color (x:xs) = x:filterFrames color xs
 
 onlyFrames :: [ESegment] -> [ESegment]
-onlyFrames ((EFrame n m c t s):xs) =
+onlyFrames ((EFrame n c t s):xs) =
   let filtered = onlyFrames s
   in if filtered == []
      then (onlyFrames xs)
-     else (EFrame n m c t filtered):(onlyFrames xs)
+     else (EFrame n c t filtered):(onlyFrames xs)
 onlyFrames (_:xs) = onlyFrames xs
 onlyFrames [] = []
 
 remodel :: EDoc -> EDoc
 remodel ((EDottedLine n):xs) = (EDottedLine n) : remodel xs
 remodel ((ESolidLine n):xs) = (ESolidLine n) : remodel xs
-remodel ((EFrame n m c t s):xs) = (EFrame n m c t (remodel s)):remodel xs
+remodel ((EFrame n c t s):xs) = (EFrame n c t (remodel s)):remodel xs
 remodel (s@(ESection _ _ _):xs) =
   maybeRemodelSection Nothing s ++
-  maybeRemodelSection (Just "") s ++
-  maybeRemodelSection (Just "0") s ++
-  maybeRemodelSection (Just "1") s ++
-  maybeRemodelSection (Just "2") s ++
-  maybeRemodelSection (Just "3") s ++
-  maybeRemodelSection (Just "4") s ++
-  maybeRemodelSection (Just "5") s ++
-  maybeRemodelSection (Just "6") s ++
-  maybeRemodelSection (Just "7") s ++
-  maybeRemodelSection (Just "8") s ++
-  maybeRemodelSection (Just "9") s ++
-  maybeRemodelSection (Just "-") s ++
-  maybeRemodelSection (Just "~") s ++
-  maybeRemodelSection (Just "=") s ++
-  maybeRemodelSection (Just "*") s ++
-  maybeRemodelSection (Just "`") s ++
-  maybeRemodelSection (Just "^") s ++
+  maybeRemodelSection (Just Black) s ++
+  maybeRemodelSection (Just Blue) s ++
+  maybeRemodelSection (Just DodgerBlue) s ++
+  maybeRemodelSection (Just CadetBlue) s ++
+  maybeRemodelSection (Just Cyan) s ++
+  maybeRemodelSection (Just ForestGreen) s ++
+  maybeRemodelSection (Just Green) s ++
+  maybeRemodelSection (Just YellowGreen) s ++
+  maybeRemodelSection (Just Yellow) s ++
+  maybeRemodelSection (Just DarkKhaki) s ++
+  maybeRemodelSection (Just Orange) s ++
+  maybeRemodelSection (Just Tomato) s ++
+  maybeRemodelSection (Just SaddleBrown) s ++
+  maybeRemodelSection (Just Firebrick) s ++
+  maybeRemodelSection (Just Red) s ++
+  maybeRemodelSection (Just Magenta) s ++
+  maybeRemodelSection (Just DarkViolet) s ++
   remodel xs
 remodel (x:xs) = x : remodel xs
 remodel [] = []
 
-maybeRemodelSection :: Maybe String -> ESegment -> [ESegment]
-maybeRemodelSection maybeMarker s@(ESection visibility title segments) =
-  case (maybeMarker, filter isFrame segments) of
+maybeRemodelSection :: Maybe EColor -> ESegment -> [ESegment]
+maybeRemodelSection maybeColor s@(ESection visibility title segments) =
+  case (maybeColor, filter isFrame segments) of
     (Nothing, []) -> [s]
-    (Just marker, (_:_)) ->
-      let filtered = filterFrames marker segments
-      in if (marker == "" || any (hasFrameOf marker) segments) && filtered /= []
-         then [ESection visibility (title ++ markerTitleSuffix marker) filtered]
+    (Just color, (_:_)) ->
+      let filtered = filterFrames color segments
+      in if (color == Black || any (hasFrameOf color) segments) && filtered /= []
+         then [ESection visibility (title ++ colorTitleSuffix color) filtered]
          else []
     _ -> []
 
-markerTitleSuffix :: String -> [EText]
-markerTitleSuffix (digit:[])
-   | digit `elem` "0123456789" = [EString (" (" ++ (digit:[]) ++ ")")]
-   | otherwise = [EString (" (" ++ markerColor (digit:[]) ++ ")")]
-markerTitleSuffix _ = []
-
-markerColor :: String -> String
-markerColor "-" = "blue"
-markerColor "~" = "cyan"
-markerColor "=" = "green"
-markerColor "*" = "magenta"
-markerColor "`" = "orange"
-markerColor "^" = "red"
-markerColor _ = "black"
+colorTitleSuffix :: EColor -> [EText]
+colorTitleSuffix color = [EString (" (" ++ show color ++ ")")]
 
 findColor :: [EText] -> EColor
 findColor ((EColored c t):_) = c
