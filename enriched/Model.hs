@@ -90,7 +90,7 @@ stringifyText :: EText -> String
 stringifyText (ELt) = "<"
 stringifyText (ESpaces n) = concat $ replicate n " "
 stringifyText (EString str) = str
-stringifyText (ENumberSpace str) = str
+stringifyText (ENumberSpace str) = str ++ " "
 stringifyText (EBold texts) = stringifyTexts texts
 stringifyText (EItalic texts) = stringifyTexts texts
 stringifyText (ESmall texts) = stringifyTexts texts

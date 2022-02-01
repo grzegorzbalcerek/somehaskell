@@ -81,6 +81,7 @@ rectStyle = "style='fill:none;stroke-width:0.40;stroke-opacity:1'"
 
 startPosX = 2.0
 startPosY = 4.0
+spaceSize = 2.0
 lineSize = 4.0
 halfLineSize = lineSize / 2.0
 
@@ -137,8 +138,7 @@ renderSegment p _ (ESection visibility title segments) =
           g2 = "</g>\n"
       in ((0,0), g1 ++ t ++ o ++ g2)
 renderSegment _ (x,y) (ELine n texts) =
-    let o = "<text" ++ argXY (x,y) ++ ">" ++ renderTexts texts ++ "</text>\n"
-    in ((fromIntegral (length (stringifyTexts texts)), lineSize), o)
+    renderTextss (x,y) (texts2textss texts)
 renderSegment _ (x,y) (EDottedLine n) =
   ((0, halfLineSize), renderSeparatorLine dottedLineStyle (x,y) n)
 renderSegment _ (x,y) (ESolidLine n) =
@@ -162,6 +162,31 @@ renderSeparatorLine style (x,y) n =
   argX1Y1 (startPosX + fromIntegral n + 1.0,y - halfLineSize) ++
   argX2Y2 (startPosX + fromIntegral 200 - fromIntegral n - 2.0,y - halfLineSize) ++
   "/>\n"
+
+renderTextss :: (Double, Double) -> [[EText]] -> ((Double, Double), String)
+renderTextss (x,y) (texts:textss) =
+    let ((w1,h1),t1) = renderXYTexts (x,y) texts
+        ((w2,h2),t2) = renderTextss (x+w1,y) textss
+    in ((w1+w2,h1 `max` h2),t1++t2)
+renderTextss _ _ = ((0,0),"")
+
+renderXYTexts :: (Double, Double) -> [EText] -> ((Double, Double), String)
+renderXYTexts (x,y) texts =
+    let o = "<text" ++ argXY (x,y) ++ ">" ++ renderTexts texts ++ "</text>\n"
+    in ((spaceSize * fromIntegral (length (stringifyTexts texts)), lineSize), o)
+
+texts2textss :: [EText] -> [[EText]]
+texts2textss texts = texts2textss' (reverse texts) []
+
+texts2textss' :: [EText] -> [[EText]] -> [[EText]]
+texts2textss' ((ESpaces n):ts) (xs:xss) =
+  if n > 1
+  then texts2textss' ts ([ESpaces n]:xs:xss)
+  else texts2textss' ts (((ESpaces n):xs):xss)
+texts2textss' (t:ts) [] = texts2textss' ts [[t]]
+texts2textss' (t:ts) (xs:xss) = texts2textss' ts ((t:xs):xss)
+texts2textss' [] acc = acc
+
 renderTexts :: [EText] -> String
 renderTexts texts = concat $ map renderText texts
 
