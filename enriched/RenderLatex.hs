@@ -46,6 +46,7 @@ renderTexts texts = concat $ map renderText texts
 
 renderText :: EText -> String
 renderText (ELt) = "<"
+renderText (ESpaces n) = concat $ replicate n " "
 renderText (EString str) = str
 renderText (ENumberSpace str) = "\\textsuperscript{" ++ str ++ "}"
 renderText (EBold texts) = "\\textbf{" ++ renderTexts texts ++ "}"

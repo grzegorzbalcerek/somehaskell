@@ -29,6 +29,7 @@ renderTexts texts = concat $ " " `intersperse` map renderText texts
 
 renderText :: EText -> String
 renderText (ELt) = "&lt;"
+renderText (ESpaces n) = "spaces(" ++ show n ++ ")"
 renderText (EString str) = "string(" ++ str ++ ")"
 renderText (ENumberSpace str) = "num(" ++ str ++ ")"
 renderText (EBold texts) = "bold(" ++ renderTexts texts ++ ")"

@@ -167,6 +167,7 @@ renderTexts texts = concat $ map renderText texts
 
 renderText :: EText -> String
 renderText (ELt) = "&lt;"
+renderText (ESpaces n) = concat $ replicate n " "
 renderText (EString str) = str
 renderText (ENumberSpace str) = "<tspan style='font-size:75%;baseline-shift:super'>" ++ str ++ "</tspan>"
 renderText (EBold texts) = "<tspan style='font-weight:bold'>" ++ renderTexts texts ++ "</tspan>"

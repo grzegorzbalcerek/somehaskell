@@ -22,6 +22,7 @@ data ESegment =
 
 data EText =
   ELt |
+  ESpaces Int |
   EString String |
   ENumberSpace String |
   EBold [EText] |
@@ -87,6 +88,7 @@ stringifyTexts texts = concat $ map stringifyText texts
 
 stringifyText :: EText -> String
 stringifyText (ELt) = "<"
+stringifyText (ESpaces n) = concat $ replicate n " "
 stringifyText (EString str) = str
 stringifyText (ENumberSpace str) = str
 stringifyText (EBold texts) = stringifyTexts texts

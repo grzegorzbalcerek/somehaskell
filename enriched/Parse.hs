@@ -102,6 +102,7 @@ skipSpaces n = count n (string " ") *> return ()
 eText :: (String -> EText) -> P EText
 eText numPlusFactory = (
     eLt <|>
+    eSpaces <|>
     (eBold numPlusFactory) <|>
     (eItalic numPlusFactory) <|>
     (eUnderline numPlusFactory) <|>
@@ -168,7 +169,12 @@ eStringNumPlusFactory :: String -> EText
 eStringNumPlusFactory str = EString (str ++ " ")
 
 eString :: P EText
-eString = EString <$> many1 (noneOf "<0123456789\n\r")
+eString = EString <$> many1 (noneOf "<0123456789 \n\r")
 
 eLt :: P EText
 eLt = try (string "<<" >> return ELt)
+
+eSpaces :: P EText
+eSpaces = do
+  sp <- many1 (string " ")
+  return $ ESpaces (length sp)
