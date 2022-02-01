@@ -62,6 +62,7 @@ eFrameBegin n starters markers defaultColor = do
   count 2 (string marker)
   title <- many (eText eStringNumPlusFactory)
   let frameColor = if title == [] then defaultColor else findColor title
+  endOfLine
 --  if title /= [] && n > 0 && frameColor /= defaultColor then unexpected "color not matched" else endOfLine
   return $ (length additionalSpaces, starter, marker, frameColor, title)
 
@@ -84,7 +85,7 @@ eLine n = do
   return $ ELine n content
 
 eEmptyLines :: P ESegment
-eEmptyLines = endOfLine >> many1 endOfLine >> return EEmptyLines
+eEmptyLines = endOfLine >> endOfLine >> many endOfLine >> return EEmptyLines
 
 eEmptyLine :: P ESegment
 eEmptyLine = endOfLine >> return EEmptyLine

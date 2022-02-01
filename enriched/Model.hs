@@ -103,8 +103,8 @@ filterFrames color ((EFrame n c title segments):xs) | color /= c =
   in if title == [] && filtered == []
      then filterFrames color xs
      else ((EFrame n c (title++[EString "…"]) (onlyFrames segments)): filterFrames color xs)
-filterFrames color (EEmptyLine:xs) = filterFrames color xs
-filterFrames color (EEmptyLines:xs) = filterFrames color xs
+filterFrames color (EEmptyLine:xs) = EEmptyLine:filterFrames color xs
+filterFrames color (EEmptyLines:xs) = EEmptyLines:filterFrames color xs
 filterFrames color (x:xs) = x:filterFrames color xs
 
 onlyFrames :: [ESegment] -> [ESegment]
