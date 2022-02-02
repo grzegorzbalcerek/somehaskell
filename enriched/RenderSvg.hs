@@ -13,8 +13,8 @@ poczatek = "<?xml version='1.0' encoding='UTF-8' standalone='no'?>\n\
 \<svg\n\
 \   xml:space='preserve'\n\
 \   width='210mm'\n\
-\   height='400mm'\n\
-\   viewBox='0 0 210 400'\n\
+\   height='800mm'\n\
+\   viewBox='0 0 210 800'\n\
 \   version='1.1'\n\
 \   id='svg1'\n\
 \   inkscape:version='1.1.1 (eb90963e84, 2021-10-02)'\n\
