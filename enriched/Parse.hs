@@ -35,7 +35,7 @@ eSection = do
 eSectionHeader :: P (Visibility, [EText])
 eSectionHeader = do
   title <- many1 (oneOf "*") *> string " " *> many (eText eStringNumPlusFactory) <* endOfLine
-  return $ if "+" `isSuffixOf` (stringifyTexts title) then (Visible, title) else (Hidden, title)
+  return $ (Visible, title)
 
 eSegment :: P ESegment
 eSegment =

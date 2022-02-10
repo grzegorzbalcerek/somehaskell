@@ -2,5 +2,6 @@ module Main where
 
 import MainLogic
 import RenderSvg
+import Model
 
-main = mainLogic renderSvg ".svg"
+main = mainLogic remodel renderSvg ".svg"

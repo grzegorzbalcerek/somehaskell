@@ -2,5 +2,6 @@ module Main where
 
 import MainLogic
 import RenderLatex
+import Model
 
-main = mainLogic renderLatex ".tex"
+main = mainLogic remodel renderLatex ".tex"

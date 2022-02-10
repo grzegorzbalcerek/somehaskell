@@ -128,12 +128,12 @@ expFilter title = filter (`elem` ['a'..'z']++['A'..'Z']++['0'..'9']) title
 renderSegment :: String -> (Double, Double) -> ESegment -> ((Double, Double), String)
 renderSegment _ (x,y) EEmptyLine = ((0,0),"")
 renderSegment _ (x,y) EEmptyLines = ((0,halfLineSize),"")
-renderSegment p _ (ESection visibility title segments) =
+renderSegment p _ (ESection _ title segments) =
       let expFile = p ++ expFilter (stringifyTexts title) ++ ".png"
           expArg = argExp expFile
           ((w,h),o) = renderSegments p (startPosX, startPosY + lineSize) segments
           id = (stringifyTexts title) `intersect` (['A'..'Z'] ++ ['a'..'z'] ++ ['0'..'9'])
-          g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility visibility ++ ">\n"
+          g1 = "<g inkscape:groupmode='layer'" ++ arg "id" id ++ arg "inkscape:label" (stringifyTexts title) ++ argVisibility Hidden ++ ">\n"
           t = "<text" ++ expArg ++ argXY (startPosX, startPosY) ++ ">" ++ renderTexts title ++ "</text>\n"
           g2 = "</g>\n"
       in ((0,0), g1 ++ t ++ o ++ g2)
