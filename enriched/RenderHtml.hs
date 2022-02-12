@@ -41,8 +41,8 @@ renderSegment (ESection Visible title segments) =
   "<details><summary>" ++ renderTexts title ++ "</summary>\n" ++ renderSegments segments ++ "</details>\n"
 renderSegment (ELine n texts) = renderTexts texts ++ "<br/>\n"
 renderSegment (EFrame n color [] segments) =
- "<div style='" ++ (if n == 0 then "" else "margin: 2px 20px; ") ++
- "border: 1px solid #" ++ hex color ++ "'>\n" ++ renderSegments segments ++ "</div>\n"
+ "<div style='" ++ (if n == 0 then "margin: 2px; padding: 2px; " else "margin: 2px 20px; padding: 2px; ") ++
+ "border: 2px solid #" ++ hex color ++ "'>\n" ++ renderSegments segments ++ "</div>\n"
 renderSegment (EFrame n color title segments) =
  "<details style='margin: 2px; padding: 2px 2px 2px 5px; position: relative; left: " ++ show (fromIntegral n / 4) ++ "%; width: " ++ show (99 - fromIntegral n / 2) ++ "%; border: 2px solid #" ++
   hex color ++ "'><summary>" ++ renderTexts title ++ "</summary>\n" ++ renderSegments segments ++ "</details>\n"
