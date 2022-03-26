@@ -15,7 +15,7 @@ poczatek = "<?xml version='1.0' encoding='UTF-8' standalone='no'?>\n\
 \<style>\n\
 \html, body {\n\
 \font-family: sans-serif;\n\
-\font-size: 12px;\n\
+\font-size: 14px;\n\
 \}\n\
 \</style>\n\
 \</head>\n\
@@ -52,7 +52,7 @@ renderTexts texts = concat $ map renderText texts
 
 renderText :: EText -> String
 renderText (ELt) = "&lt;"
-renderText (ESpaces n) = "<span style='white-space: pre'>" ++ (concat $ replicate n " ") ++ "</span>"
+renderText (ESpaces n) = "<span style='white-space: pre-wrap'>" ++ (concat $ replicate n " ") ++ "</span>"
 renderText (EString str) = str
 renderText (ENumberSpace str) = "<sup><small>" ++ str ++ "</small></sup>"
 renderText (EBold texts) = "<strong>" ++ renderTexts texts ++ "</strong>"
